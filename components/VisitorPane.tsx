@@ -104,7 +104,6 @@ export const VisitorPane: React.FC<VisitorPaneProps> = ({
             currentVisitor={visitor}
             opponentTyping={opponentTyping}
             onSendMessage={sendMessage}
-            onSendReaction={sendReaction}
             onSendTyping={sendTyping}
             onLeaveDebate={leaveDebate}
             onToggleArchive={onToggleArchive}

@@ -3,8 +3,7 @@ import type { Visitor, TopicItem, TopicCarpoolStatus, ArchivedDebate } from '../
 import { VISITOR_COLORS } from '../constants';
 import {
   Edit2,
-  Plus,
-  PlusCircle,
+  PlusSquare,
   ScrollText,
 } from 'lucide-react';
 
@@ -72,10 +71,6 @@ const TopicCreatorLobby: React.FC<TopicCreatorLobbyProps> = ({
             <Edit2 className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        <span className="text-[11px] italic text-gray-400 hidden sm:inline font-serif">
-          Select an inquiry from the Stoa above or inscribe a new subject below
-        </span>
       </div>
 
       {/* Profile Edit Drawer */}
@@ -115,23 +110,19 @@ const TopicCreatorLobby: React.FC<TopicCreatorLobbyProps> = ({
         </form>
       )}
 
-      {/* Main Chamber Body: Only Topic Inscription Field (No Topic Suggestions) */}
+      {/* Main Chamber Body: Topic Inscription Area */}
       <div className="flex-1 p-4 sm:p-5 max-w-4xl mx-auto w-full flex flex-col justify-center">
-        {/* INSCRIBE NEW TOPIC CARD */}
-        <div className="rounded-xl bg-gray-950/90 border border-indigo-500/40 p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                <PlusCircle className="w-5 h-5" />
-              </span>
-              <div>
-                <h3 className="text-base font-bold text-gray-100 font-serif tracking-wide">
-                  Inscribe a New Subject of Inquiry
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Add a philosophical question or topic to the Agora stream
-                </p>
-              </div>
+        <div className="rounded-xl bg-gray-950/90 border border-indigo-500/40 p-5 sm:p-6 shadow-xl space-y-4">
+          {/* Main Prompt Banner with Larger Font Size */}
+          <div className="text-center font-serif space-y-1.5 py-3 px-4 bg-gray-900/80 rounded-lg border border-indigo-500/30 shadow-md">
+            <div className="text-sm sm:text-base font-semibold tracking-wide text-gray-100">
+              Select an inquiry from the Stoa above
+            </div>
+            <div className="font-sans font-black text-xs sm:text-sm text-indigo-400 tracking-widest my-0.5">
+              OR
+            </div>
+            <div className="text-sm sm:text-base font-semibold tracking-wide text-gray-200">
+              inscribe a new subject below
             </div>
           </div>
 
@@ -149,11 +140,10 @@ const TopicCreatorLobby: React.FC<TopicCreatorLobbyProps> = ({
             <button
               type="submit"
               disabled={!topicInput.trim()}
-              className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-gray-100 font-serif font-bold text-xs sm:text-sm transition-colors disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-              title="Add new topic to the Agora"
+              className="inline-flex items-center justify-center p-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-gray-100 transition-colors disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed cursor-pointer shadow-sm flex-shrink-0"
+              title="Add new subject"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Inquiry</span>
+              <PlusSquare className="w-5 h-5" />
             </button>
           </form>
         </div>

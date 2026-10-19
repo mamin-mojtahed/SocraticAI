@@ -7,10 +7,9 @@ import { useDebateSocket } from './services/useDebateSocket';
 import { 
   Network, 
   ExternalLink, 
-  Columns, 
   Archive as ArchiveLucide, 
   MessagesSquare, 
-  MessageCircle,
+  MessageSquare,
   Radio,
   Clock,
   RefreshCw,
@@ -18,38 +17,14 @@ import {
 } from 'lucide-react';
 import { XLogo, RedditLogo, FacebookLogo } from './components/icons/SocialLogos';
 
-// Container for Secondary Visitor in Split View so socket only connects when split view is active
-const SecondaryVisitorContainer: React.FC<{
-  visitorNum: number;
-  onToggleArchive: () => void;
-  onOpenDebugView: () => void;
-}> = ({ visitorNum, onToggleArchive, onOpenDebugView }) => {
-  const secondarySocket = useDebateSocket({
-    customVisitorId: `sim-v-${visitorNum}`,
-    initialName:
-      visitorNum === 2 ? 'Beta Thinker' : visitorNum === 3 ? 'Gamma Inquirer' : 'Delta Philosopher',
-  });
-
-  return (
-    <VisitorPane
-      socket={secondarySocket}
-      paneLabel={`Interlocutor #${visitorNum}`}
-      isSplitView={true}
-      onToggleArchive={onToggleArchive}
-      onOpenDebugView={onOpenDebugView}
-    />
-  );
-};
-
 const App: React.FC = () => {
   const primarySocket = useDebateSocket();
 
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
-  const [isSplitView, setIsSplitView] = useState(false);
-  const [secondaryVisitorNum, setSecondaryVisitorNum] = useState(2); // 2, 3, or 4
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
+  const [isPulseOpen, setIsPulseOpen] = useState(false);
 
   // Resizable Slider between Upper and Lower Halves (15% to 80%)
   const [upperHeightPercent, setUpperHeightPercent] = useState(40);
@@ -111,7 +86,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-screen flex-col bg-gray-950 text-gray-100 font-sans overflow-hidden select-none">
       {/* Classical Socratic Top Header */}
-      <header className="flex h-12 items-center justify-between px-4 bg-gray-950 border-b border-gray-800 flex-shrink-0 z-30 shadow-sm">
+      <header className="flex h-12 items-center justify-between px-4 bg-gray-950 border-b border-gray-800 flex-shrink-0 z-50 shadow-sm relative">
         <div className="flex items-center gap-2.5">
           <MessagesSquare className="w-5 h-5 text-indigo-400" />
           <span className="font-serif font-bold text-[20px] tracking-wide text-gray-100">
@@ -125,11 +100,14 @@ const App: React.FC = () => {
         {/* Global Toolbar Actions and Counters */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Social Media Trends Indicator: Left of online counter */}
-          <div className="relative group">
+          <div className="relative group z-50">
             <button
-              onClick={() => primarySocket.refreshSocialTrends()}
+              onClick={() => {
+                setIsPulseOpen((prev) => !prev);
+                primarySocket.refreshSocialTrends();
+              }}
               className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-850 border border-gray-700/80 hover:border-indigo-500/60 px-2.5 py-1 rounded-md text-xs text-gray-200 transition-colors cursor-pointer"
-              title="Public Discourse Trends (Hover to inspect fetch time & top subjects)"
+              title="Public Discourse Trends (Click or hover to inspect X, Reddit, & Facebook trends)"
             >
               <span className="flex items-center gap-1">
                 <XLogo className="w-3 h-3 text-gray-200" />
@@ -139,28 +117,43 @@ const App: React.FC = () => {
               <span className="text-xs font-medium hidden md:inline text-gray-200">
                 Public Pulse
               </span>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </button>
 
-            {/* Hover Tooltip / Popover showing when social media were last fetched & what top tags were */}
-            <div className="absolute top-full left-0 sm:left-auto sm:right-0 mt-1.5 w-72 sm:w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-3.5 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
-              <div className="space-y-2.5 text-xs text-gray-200">
+            {/* Popover showing X, Reddit, and Facebook field boxes with trends */}
+            <div
+              className={`absolute top-full left-0 sm:left-auto sm:right-0 mt-2 w-80 sm:w-96 max-h-[82vh] overflow-y-auto bg-gray-900 border border-gray-700/80 rounded-xl shadow-2xl p-4 z-50 transition-all duration-200 ${
+                isPulseOpen
+                  ? 'visible opacity-100 pointer-events-auto'
+                  : 'invisible group-hover:visible opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+              }`}
+            >
+              <div className="space-y-3 text-xs text-gray-200">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-800 pb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Radio className="w-3.5 h-3.5 text-indigo-400" />
-                    <span className="font-bold text-gray-100 text-xs font-serif tracking-wide">Agora Public Pulse</span>
+                <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-4 h-4 text-indigo-400" />
+                    <span className="font-bold text-gray-100 text-sm font-serif tracking-wide">
+                      Agora Public Pulse
+                    </span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    Cached (1h)
-                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      primarySocket.refreshSocialTrends();
+                    }}
+                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer bg-gray-800/80 hover:bg-gray-800 px-2 py-1 rounded border border-gray-700/70"
+                    title="Refresh Live Social Trends"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Refresh</span>
+                  </button>
                 </div>
 
-                {/* When last fetched */}
-                <div className="flex items-center justify-between text-xs bg-gray-950/80 p-2 rounded border border-gray-800">
+                {/* Last Updated Timestamp */}
+                <div className="flex items-center justify-between text-xs bg-gray-950/90 px-3 py-1.5 rounded-lg border border-gray-800">
                   <div className="flex items-center gap-1.5 text-gray-400">
                     <Clock className="w-3.5 h-3.5 text-gray-500" />
-                    <span>Last inscribed:</span>
+                    <span>Last updated:</span>
                   </div>
                   <span className="font-mono text-gray-100 font-semibold">
                     {primarySocket.socialTrendsStatus?.lastFetchedAt
@@ -173,61 +166,94 @@ const App: React.FC = () => {
                   </span>
                 </div>
 
-                {/* What top tags were */}
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1 tracking-wider">
-                    Prominent Subjects:
-                  </span>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {(primarySocket.socialTrendsStatus?.topTags || [
-                      '#AIAct',
-                      'r/technology',
-                      '#WorkLifeBalance',
-                      'r/science',
-                      '#CreatorEconomy',
-                    ]).map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="px-1.5 py-0.5 rounded bg-gray-850 border border-gray-700 text-indigo-300 font-mono text-[10px] font-semibold"
-                      >
-                        {tag}
-                      </span>
+                {/* 1. X Field Box */}
+                <div className="bg-black border border-neutral-800 rounded-lg p-3 space-y-2 shadow-md">
+                  <div className="flex items-center gap-1.5 border-b border-neutral-800 pb-1.5">
+                    <XLogo className="w-3.5 h-3.5 text-white" />
+                    <span className="font-bold text-gray-100 text-xs font-serif tracking-wide">
+                      X Trends
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {(
+                      primarySocket.socialTrendsStatus?.trends?.x || [
+                        { title: 'Open-Weight AI Models vs Closed Systems', tag: '#AIAct' },
+                        { title: 'Mandatory Remote Work Laws for Tech', tag: '#FutureOfWork' },
+                        { title: 'Algorithmic Content Monetization Rights', tag: '#CreatorEconomy' },
+                      ]
+                    ).map((item, idx) => (
+                      <div key={idx} className="flex items-start justify-between gap-2 text-[12px] leading-snug">
+                        <span className="text-gray-200 font-medium break-words flex-1">
+                          {item.title}
+                        </span>
+                        {item.tag && (
+                          <span className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-700 text-gray-100 font-mono text-[11px] font-bold flex-shrink-0 shadow-sm">
+                            {item.tag}
+                          </span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Platform Breakdown: Top 5 each */}
-                <div className="grid grid-cols-3 gap-1.5 pt-1 text-center font-mono text-[10px]">
-                  <div className="bg-gray-950/90 border border-gray-800 p-1.5 rounded flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-1 text-gray-200 font-bold">
-                      <XLogo className="w-3 h-3" /> X
+                {/* 2. Reddit Field Box */}
+                <div className="bg-[#29150c] border border-orange-900/60 rounded-lg p-3 space-y-2 shadow-md">
+                  <div className="flex items-center gap-1.5 border-b border-orange-900/50 pb-1.5">
+                    <RedditLogo className="w-3.5 h-3.5 text-orange-500" />
+                    <span className="font-bold text-orange-200 text-xs font-serif tracking-wide">
+                      Reddit Trends
                     </span>
-                    <span className="text-indigo-300 font-bold">5 Subjects</span>
                   </div>
-                  <div className="bg-orange-950/40 border border-orange-900/50 p-1.5 rounded flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-1 text-orange-300 font-bold">
-                      <RedditLogo className="w-3 h-3 text-orange-500" /> Reddit
-                    </span>
-                    <span className="text-indigo-300 font-bold">5 Inquiries</span>
-                  </div>
-                  <div className="bg-amber-950/40 border border-amber-900/50 p-1.5 rounded flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-1 text-amber-300 font-bold">
-                      <FacebookLogo className="w-3 h-3 text-blue-500" /> Facebook
-                    </span>
-                    <span className="text-indigo-300 font-bold">5 Discussions</span>
+                  <div className="space-y-2">
+                    {(
+                      primarySocket.socialTrendsStatus?.trends?.reddit || [
+                        { title: 'Reproducibility Crisis in Modern Science', tag: 'r/science' },
+                        { title: 'Subscription Culture & Digital Ownership', tag: 'r/technology' },
+                        { title: 'Universal Basic Income vs Welfare Systems', tag: 'r/economics' },
+                      ]
+                    ).map((item, idx) => (
+                      <div key={idx} className="flex items-start justify-between gap-2 text-[12px] leading-snug">
+                        <span className="text-orange-100 font-medium break-words flex-1">
+                          {item.title}
+                        </span>
+                        {item.tag && (
+                          <span className="px-2 py-0.5 rounded bg-orange-950/90 border border-orange-800/80 text-orange-200 font-mono text-[11px] font-bold flex-shrink-0 shadow-sm">
+                            {item.tag}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Footer action: Manual refresh button */}
-                <div className="pt-1.5 border-t border-gray-800 flex items-center justify-between text-[11px] text-gray-400">
-                  <span>Agora cache: 1 hour</span>
-                  <button
-                    onClick={() => primarySocket.refreshSocialTrends()}
-                    className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Refresh Pulse</span>
-                  </button>
+                {/* 3. Facebook Field Box */}
+                <div className="bg-[#251a0f] border border-amber-900/60 rounded-lg p-3 space-y-2 shadow-md">
+                  <div className="flex items-center gap-1.5 border-b border-amber-900/50 pb-1.5">
+                    <FacebookLogo className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="font-bold text-amber-200 text-xs font-serif tracking-wide">
+                      Facebook Trends
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {(
+                      primarySocket.socialTrendsStatus?.trends?.facebook || [
+                        { title: 'Cell Phones and Social Media Bans in K-12', tag: '#EducationFirst' },
+                        { title: 'Four-Day Work Week Productivity Boost', tag: '#WorkLifeBalance' },
+                        { title: 'Public Subsidies for Independent Local Media', tag: '#CivicDebate' },
+                      ]
+                    ).map((item, idx) => (
+                      <div key={idx} className="flex items-start justify-between gap-2 text-[12px] leading-snug">
+                        <span className="text-amber-100 font-medium break-words flex-1">
+                          {item.title}
+                        </span>
+                        {item.tag && (
+                          <span className="px-2 py-0.5 rounded bg-amber-950/90 border border-amber-800/80 text-amber-200 font-mono text-[11px] font-bold flex-shrink-0 shadow-sm">
+                            {item.tag}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -244,7 +270,7 @@ const App: React.FC = () => {
             </span>
             <span className="text-gray-600">/</span>
             <span className="flex items-center gap-1 text-indigo-300">
-              <MessageCircle className="w-3.5 h-3.5 text-indigo-400" />
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
               {primarySocket.activeDebatesCount}
             </span>
           </div>
@@ -276,21 +302,7 @@ const App: React.FC = () => {
             <span className="hidden sm:inline">New Chair</span>
           </button>
 
-          {/* Action 2: Split View */}
-          <button
-            onClick={() => setIsSplitView(!isSplitView)}
-            className={`px-2.5 py-1 rounded-md border transition-all text-xs font-medium flex items-center gap-1.5 ${
-              isSplitView
-                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500 ring-1 ring-indigo-500'
-                : 'bg-gray-900 hover:bg-gray-800 border-gray-700/80 text-gray-200 hover:text-gray-50'
-            }`}
-            title={isSplitView ? 'Exit split view' : 'Dual interlocutor split view'}
-          >
-            <Columns className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Split View</span>
-          </button>
-
-          {/* Action 3: Archive */}
+          {/* Action 2: Archive */}
           <button
             onClick={() => setIsArchiveOpen(true)}
             className="px-2.5 py-1 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-700/80 text-gray-200 hover:text-gray-50 transition-colors text-xs font-medium flex items-center gap-1.5 relative"
@@ -324,7 +336,6 @@ const App: React.FC = () => {
             waitingTopicId={primarySocket.waitingTopic?.topicId || null}
             activeTopicId={primarySocket.activeRoom?.topicId || null}
             onTopicSelect={handleTopicSelectFromStream}
-            onEditTopic={primarySocket.editTopic}
           />
         </section>
 
@@ -350,58 +361,13 @@ const App: React.FC = () => {
           style={{ height: `${100 - upperHeightPercent}%` }}
           className="w-full flex-1 relative overflow-hidden bg-gray-900 pointer-events-auto"
         >
-          {!isSplitView ? (
-            <VisitorPane
-              socket={primarySocket}
-              paneLabel="You"
-              isSplitView={false}
-              onToggleArchive={() => setIsArchiveOpen(true)}
-              onOpenDebugView={() => setIsDebugOpen(true)}
-            />
-          ) : (
-            <div className="flex flex-col sm:flex-row h-full w-full divide-y sm:divide-y-0 sm:divide-x divide-gray-800">
-              {/* Left Pane: Interlocutor 1 */}
-              <div className="flex-1 h-full overflow-hidden flex flex-col">
-                <VisitorPane
-                  socket={primarySocket}
-                  paneLabel="Interlocutor #1"
-                  isSplitView={true}
-                  onToggleArchive={() => setIsArchiveOpen(true)}
-                  onOpenDebugView={() => setIsDebugOpen(true)}
-                />
-              </div>
-
-              {/* Right Pane: Interlocutor 2 / 3 / 4 */}
-              <div className="flex-1 h-full overflow-hidden flex flex-col">
-                <div className="bg-gray-950 px-2.5 py-1 flex items-center justify-between text-xs text-gray-400 border-b border-gray-800">
-                  <span className="font-serif italic text-xs text-gray-300">Companion Seat</span>
-                  <div className="flex items-center gap-1">
-                    {[2, 3, 4].map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setSecondaryVisitorNum(num)}
-                        className={`px-2 py-0.5 rounded font-mono text-[10px] font-semibold transition-colors ${
-                          secondaryVisitorNum === num
-                            ? 'bg-indigo-600 text-gray-100'
-                            : 'bg-gray-800 text-gray-400 hover:text-gray-100'
-                        }`}
-                      >
-                        II-{num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <SecondaryVisitorContainer
-                    key={`sim-visitor-${secondaryVisitorNum}`}
-                    visitorNum={secondaryVisitorNum}
-                    onToggleArchive={() => setIsArchiveOpen(true)}
-                    onOpenDebugView={() => setIsDebugOpen(true)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          <VisitorPane
+            socket={primarySocket}
+            paneLabel="You"
+            isSplitView={false}
+            onToggleArchive={() => setIsArchiveOpen(true)}
+            onOpenDebugView={() => setIsDebugOpen(true)}
+          />
         </section>
       </main>
 

@@ -586,36 +586,66 @@ async function start() {
             const existingTopic = topics.find((t) => t.id === topicId);
             if (!existingTopic) return;
 
-            const oldTitle = existingTopic.title;
-            existingTopic.title = trimmedTitle;
+            const isPredefined =
+              existingTopic.createdBy === 'System' ||
+              existingTopic.id.startsWith('top-') ||
+              Boolean(existingTopic.platform);
 
-            // Update any waiting participants on this topic
-            let participantUpdated = false;
-            for (const wp of waitingParticipants.values()) {
-              if (wp.topicId === topicId) {
-                wp.topicTitle = trimmedTitle;
-                if (wp.currentStance.startsWith(oldTitle)) {
-                  wp.currentStance =
-                    trimmedTitle + wp.currentStance.slice(oldTitle.length);
-                } else {
-                  wp.currentStance = `${trimmedTitle}. ${wp.currentStance}`;
+            if (isPredefined) {
+              // Predefined topic: preserve original in the pool, create a new custom topic for the editing user
+              const newTopicId = `custom-${uuidv4().substring(0, 8)}`;
+              const newTopic: TopicItem = {
+                id: newTopicId,
+                title: trimmedTitle,
+                createdAt: Date.now(),
+                createdBy: currentVisitorId,
+                rowIndex: 0,
+              };
+              topics.unshift(newTopic);
+              carpoolStatus.set(newTopicId, {
+                topicId: newTopicId,
+                waitingCount: 0,
+                waitingUsers: [],
+                activeDebatesCount: 0,
+              });
+
+              // Broadcast the new topic addition to all users
+              broadcast({
+                type: 'topic:added',
+                payload: {
+                  topic: newTopic,
+                  carpoolStatus: carpoolStatus.get(newTopicId)!,
+                },
+              });
+
+              // Switch visitor to the new custom topic
+              handleTopicSelect(currentVisitorId, newTopicId, 'neutral');
+            } else {
+              // Custom topic: update in place
+              const oldTitle = existingTopic.title;
+              existingTopic.title = trimmedTitle;
+
+              for (const wp of waitingParticipants.values()) {
+                if (wp.topicId === topicId) {
+                  wp.topicTitle = trimmedTitle;
+                  if (wp.currentStance.startsWith(oldTitle)) {
+                    wp.currentStance =
+                      trimmedTitle + wp.currentStance.slice(oldTitle.length);
+                  } else {
+                    wp.currentStance = `${trimmedTitle}. ${wp.currentStance}`;
+                  }
                 }
-                participantUpdated = true;
               }
-            }
 
-            broadcast({
-              type: 'topic:updated',
-              payload: { topic: existingTopic },
-            });
+              broadcast({
+                type: 'topic:updated',
+                payload: { topic: existingTopic },
+              });
 
-            if (participantUpdated) {
               pairDeclineCooldowns.clear();
               evaluateAndNotifyMatches().catch((err) =>
                 console.error('Error evaluating matches after topic:edit:', err)
               );
-            } else {
-              broadcastDebugUpdate();
             }
             break;
           }
@@ -828,7 +858,7 @@ async function start() {
                     senderId: 'system',
                     senderName: 'Socratic Symposium',
                     senderColor: '#c88a32',
-                    text: `🏛️ **Socratic Dialogue Convened**\n\nShared Question of Inquiry:\n**"${debateTopic}"**\n\nInterlocutors: **${userA.name}** & **${userB.name}**. Let us inquire together in the spirit of wisdom and mutual understanding.`,
+                    text: `💬 **Socratic Dialogue Begun**`,
                     timestamp: Date.now(),
                     isSystem: true,
                   };
@@ -1105,7 +1135,7 @@ async function start() {
         senderId: 'system',
         senderName: 'Agora of Dialogue',
         senderColor: '#6b8e4e',
-        text: `💬 **Socratic Dialogue Begun**\n\nBoth companions have gathered to contemplate:\n**"${topic.title}"**.\n\nExchange reflections, questions, and insights with philosophical curiosity and mutual respect.`,
+        text: `💬 **Socratic Dialogue Begun**`,
         timestamp: Date.now(),
         isSystem: true,
       };

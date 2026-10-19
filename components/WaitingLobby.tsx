@@ -370,13 +370,10 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
               <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300">
                 <MessagesSquare className="w-5 h-5" />
               </div>
-              <div className="space-y-1">
+              <div>
                 <h3 className="font-bold text-gray-100 text-sm font-serif tracking-wide">
                   Socratic Prelude &amp; Reflection
                 </h3>
-                <p className="text-xs text-gray-300 max-w-sm mx-auto leading-relaxed">
-                  Converse with the Socratic Guide or record your initial reflections while waiting—your thoughts help align you with a kindred interlocutor.
-                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
