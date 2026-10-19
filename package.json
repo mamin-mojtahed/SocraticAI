@@ -1,0 +1,33 @@
+{
+  "name": "socraticai",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build",
+    "start": "tsx server.ts",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/genai": "^1.29.0",
+    "express": "^5.3.0",
+    "lucide-react": "^1.59.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "uuid": "^13.0.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.14.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

@@ -1,0 +1,92 @@
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+html {
+  font-size: 16.5px;
+}
+
+body {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  background-color: #16100a;
+  color: #f8f0e1;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+}
+
+/* Subtle classical Greek border accents */
+.greek-border-b {
+  border-bottom: 1px solid #473623;
+  box-shadow: 0 1px 0 0 #2b2014;
+}
+
+.greek-border-t {
+  border-top: 1px solid #473623;
+  box-shadow: 0 -1px 0 0 #2b2014;
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 60s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-right 60s linear infinite;
+  will-change: transform;
+}
+
+.animate-slide-left {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 60s linear infinite;
+  will-change: transform;
+}
+
+.animate-slide-right {
+  display: flex;
+  width: max-content;
+  animation: marquee-right 60s linear infinite;
+  will-change: transform;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+  list-style-position: inside;
+  margin-left: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content > *:last-child {
+  margin-bottom: 0;
+}

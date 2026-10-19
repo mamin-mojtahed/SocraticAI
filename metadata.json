@@ -1,0 +1,8 @@
+{
+  "name": "SocraticAI",
+  "description": "A real-time multi-user debate platform with continuous carpooling topic stream, live matchmaking lobby, and inline visitor-to-visitor debate rooms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

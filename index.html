@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <title>SocraticAI — Classical Agora of Socratic Dialogue</title>
+    <meta name="description" content="A classical Socratic symposium and conversational forum for shared inquiry, philosophical reflection, and live person-to-person dialogue." />
+    <meta property="og:title" content="SocraticAI — Classical Agora of Socratic Dialogue" />
+    <meta property="og:description" content="A classical Socratic symposium and conversational forum for shared inquiry, philosophical reflection, and live person-to-person dialogue." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Lora"', 'Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+              serif: ['"Libre Baskerville"', 'Georgia', 'serif'],
+              mono: ['"Courier New"', 'Courier', 'monospace'],
+            },
+            colors: {
+              // Warm Greek dark walnut / umber / parchment palette with high legibility contrast
+              gray: {
+                50: '#fdfaf4',
+                100: '#f8f0e1',
+                200: '#efe2c9',
+                300: '#dfcba8',
+                400: '#bfa57d',
+                500: '#997e58',
+                600: '#765e3f',
+                700: '#57432c',
+                750: '#473623',
+                800: '#392b1c',
+                850: '#2b2014',
+                900: '#21180f',
+                950: '#16100a',
+              },
+              // Classical Greek terracotta / burnished bronze / antique gold
+              indigo: {
+                50: '#fef9f0',
+                100: '#fbf0da',
+                200: '#f5dcb0',
+                300: '#ecc17c',
+                400: '#dfa148',
+                500: '#cc8429',
+                600: '#ae691d',
+                700: '#8d5118',
+                800: '#724117',
+                900: '#5d3515',
+                950: '#351c0a',
+              },
+              // Warm Corinthian copper / bronze
+              purple: {
+                50: '#fdf7f2',
+                100: '#f8eadc',
+                200: '#f0d3b6',
+                300: '#e4b488',
+                400: '#d49059',
+                500: '#c17338',
+                600: '#a35929',
+                700: '#844623',
+                800: '#6b3920',
+                900: '#58301c',
+                950: '#31180d',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @keyframes marquee-left {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+      @keyframes marquee-right {
+        0% { transform: translateX(-50%); }
+        100% { transform: translateX(0); }
+      }
+      .animate-marquee {
+        display: flex;
+        width: max-content;
+        animation: marquee-left 60s linear infinite;
+        will-change: transform;
+      }
+      .animate-marquee-reverse {
+        display: flex;
+        width: max-content;
+        animation: marquee-right 60s linear infinite;
+        will-change: transform;
+      }
+      .animate-slide-left {
+        display: flex;
+        width: max-content;
+        animation: marquee-left 60s linear infinite;
+        will-change: transform;
+      }
+      .animate-slide-right {
+        display: flex;
+        width: max-content;
+        animation: marquee-right 60s linear infinite;
+        will-change: transform;
+      }
+      .markdown-content p {
+          margin-bottom: 0.75rem;
+      }
+      .markdown-content strong {
+          font-weight: 600;
+      }
+      .markdown-content ul {
+          list-style-type: disc;
+          list-style-position: inside;
+          margin-left: 0.5rem;
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+      }
+      .markdown-content li {
+          margin-bottom: 0.25rem;
+      }
+      .markdown-content > *:last-child {
+          margin-bottom: 0;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^9.0.1",
+    "remark-gfm": "remark-gfm@^4.0.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-950 text-gray-100 font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
