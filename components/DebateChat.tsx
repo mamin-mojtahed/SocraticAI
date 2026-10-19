@@ -2,11 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { DebateRoom, Visitor } from '../types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { 
-  Check, 
-  X,
-  Send,
-} from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface DebateChatProps {
   room: DebateRoom;
@@ -24,14 +20,13 @@ const DebateChat: React.FC<DebateChatProps> = ({
   opponentTyping,
   onSendMessage,
   onSendTyping,
-  onLeaveDebate,
 }) => {
   const [inputText, setInputText] = useState('');
-  const [showConfirmLeave, setShowConfirmLeave] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
 
-  const opponent = room.debater1.id === currentVisitor?.id ? room.debater2 : room.debater1;
+  const opponent =
+    room.debater1.id === currentVisitor?.id ? room.debater2 : room.debater1;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,56 +53,6 @@ const DebateChat: React.FC<DebateChatProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-gray-900 border-t border-gray-800 overflow-hidden">
-      {/* Header: Subject & Interlocutors Info */}
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-950 border-b border-gray-800 z-10 flex-shrink-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-xs sm:text-sm font-bold text-gray-100 truncate font-serif">
-            {room.topicTitle}
-          </span>
-        </div>
-
-        {/* Interlocutor info & Conclude */}
-        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-          <div className="flex items-center gap-1.5 text-xs text-gray-300">
-            <span
-              className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
-              style={{ backgroundColor: opponent?.color || '#6b8e4e' }}
-            ></span>
-            <span className="truncate max-w-[90px] sm:max-w-[140px] text-gray-200 font-serif">
-              {opponent?.name || 'Companion'}
-            </span>
-          </div>
-
-          {showConfirmLeave ? (
-            <div className="flex items-center gap-1 bg-red-950 border border-red-800 px-2 py-0.5 rounded text-xs">
-              <span className="text-red-300 font-medium">Conclude?</span>
-              <button
-                onClick={onLeaveDebate}
-                className="bg-red-700 hover:bg-red-600 text-gray-100 font-bold p-1 rounded transition-colors cursor-pointer"
-                title="Confirm concluding dialogue"
-              >
-                <Check className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setShowConfirmLeave(false)}
-                className="text-gray-400 hover:text-gray-100 p-1 transition-colors cursor-pointer"
-                title="Cancel"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowConfirmLeave(true)}
-              className="text-gray-400 hover:text-red-300 hover:bg-red-950/50 p-1 rounded transition-colors cursor-pointer"
-              title="Conclude Socratic dialogue"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Messages Feed */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
         {room.messages.map((msg) => {
@@ -130,7 +75,9 @@ const DebateChat: React.FC<DebateChatProps> = ({
           return (
             <div
               key={msg.id}
-              className={`flex items-start gap-2 sm:gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+              className={`flex items-start gap-2 sm:gap-2.5 ${
+                isMe ? 'flex-row-reverse' : 'flex-row'
+              }`}
             >
               {/* Avatar circle */}
               <div
@@ -141,14 +88,21 @@ const DebateChat: React.FC<DebateChatProps> = ({
               </div>
 
               {/* Message Bubble Box */}
-              <div className={`flex flex-col max-w-[84%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'}`}>
+              <div
+                className={`flex flex-col max-w-[84%] sm:max-w-md ${
+                  isMe ? 'items-end' : 'items-start'
+                }`}
+              >
                 {/* Sender name */}
                 <div className="flex items-center gap-1.5 mb-0.5 sm:mb-1 px-1">
                   <span className="text-[11px] sm:text-xs font-semibold text-gray-300 font-serif">
                     {isMe ? 'You' : msg.senderName}
                   </span>
                   <span className="text-[10px] sm:text-[11px] text-gray-500">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
 
@@ -161,7 +115,9 @@ const DebateChat: React.FC<DebateChatProps> = ({
                   }`}
                 >
                   <div className="markdown-content break-words">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
                   </div>
                 </div>
               </div>
@@ -177,7 +133,9 @@ const DebateChat: React.FC<DebateChatProps> = ({
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.2s]"></span>
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.4s]"></span>
             </div>
-            <span>{opponent?.name || 'Your companion'} is composing a reflection...</span>
+            <span>
+              {opponent?.name || 'Your companion'} is composing a reflection...
+            </span>
           </div>
         )}
 

@@ -74,6 +74,11 @@ export interface DebateRoom {
   createdAt: number;
   concludedAt?: number;
   concludedReason?: string;
+  isBridgeMatch?: boolean;
+  closeness?: number;
+  rationale?: string;
+  debater1OriginalTopic?: string;
+  debater2OriginalTopic?: string;
 }
 
 export interface ArchivedDebate {

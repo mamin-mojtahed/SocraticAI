@@ -51,6 +51,11 @@ interface PillDomRefs {
   fullTargetWidth: number;
 }
 
+interface StreamRowDescriptor {
+  kind: 'in-progress' | 'waiting' | 'regular';
+  items: TopicItem[];
+}
+
 const BASE_MAX_W = 215;
 const MIN_ITEMS_PER_COPY = 20;
 
@@ -126,63 +131,122 @@ const TopicStream: React.FC<TopicStreamProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const availableHeight = Math.max(60, containerHeight - 36);
-  const dynamicRowCount = Math.max(2, Math.min(10, Math.floor(availableHeight / 42)));
+  // Derive live in-progress and waiting topics immediately from current topics & carpoolStatus
+  const liveTopicsPool = topics.length > 0 ? topics : stableTopics;
+
+  const inProgressTopics = useMemo(() => {
+    return liveTopicsPool.filter((t) => {
+      const activeCount = carpoolStatus[t.id]?.activeDebatesCount || 0;
+      return activeTopicId === t.id || activeCount > 0;
+    });
+  }, [liveTopicsPool, carpoolStatus, activeTopicId]);
+
+  const waitingTopics = useMemo(() => {
+    return liveTopicsPool.filter((t) => {
+      const waitingCount = carpoolStatus[t.id]?.waitingCount || 0;
+      return waitingTopicId === t.id || waitingCount > 0;
+    });
+  }, [liveTopicsPool, carpoolStatus, waitingTopicId]);
+
+  const pinnedTopicIds = useMemo(() => {
+    const set = new Set<string>();
+    inProgressTopics.forEach((t) => set.add(t.id));
+    waitingTopics.forEach((t) => set.add(t.id));
+    return set;
+  }, [inProgressTopics, waitingTopics]);
+
+  const topSpecialRowsCount =
+    (inProgressTopics.length > 0 ? 1 : 0) + (waitingTopics.length > 0 ? 1 : 0);
+
+  const availableHeight = Math.max(44, containerHeight - 36 - topSpecialRowsCount * 38);
+  const regularRowCount = Math.max(1, Math.min(10, Math.floor(availableHeight / 42)));
 
   const randomizedTopics = useMemo(() => {
-    const list = [...stableTopics];
-    for (let i = list.length - 1; i > 0; i--) {
+    const list = stableTopics.filter((t) => !pinnedTopicIds.has(t.id));
+    const source = list.length > 0 ? [...list] : [...stableTopics];
+    for (let i = source.length - 1; i > 0; i--) {
       let hash = 0;
-      const str = list[i].id;
+      const str = source[i].id;
       for (let c = 0; c < str.length; c++) {
         hash = (hash << 5) - hash + str.charCodeAt(c);
         hash |= 0;
       }
       const j = Math.abs(hash * 1664525 + 1013904223) % (i + 1);
-      const temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
+      const temp = source[i];
+      source[i] = source[j];
+      source[j] = temp;
     }
-    return list;
-  }, [stableTopics]);
+    return source;
+  }, [stableTopics, pinnedTopicIds]);
 
-  const rows: TopicItem[][] = useMemo(() => {
-    const r: TopicItem[][] = Array.from({ length: dynamicRowCount }, () => []);
+  const regularRows: TopicItem[][] = useMemo(() => {
+    const r: TopicItem[][] = Array.from({ length: regularRowCount }, () => []);
     randomizedTopics.forEach((topic, idx) => {
-      r[idx % dynamicRowCount].push(topic);
+      r[idx % regularRowCount].push(topic);
     });
     return r;
-  }, [randomizedTopics, dynamicRowCount]);
+  }, [randomizedTopics, regularRowCount]);
 
-  const normalizedRows = useMemo(() => {
-    return rows.map((row, rIdx) => {
-      const source = row.length > 0 ? row : FALLBACK_STARTUP_TOPICS.slice(0, 8);
-
+  // Build unified array of stream rows:
+  // 1. In-Progress row on top of top (if any)
+  // 2. Waiting row at top (if any)
+  // 3. Regular topic rows below
+  const allStreamRows: StreamRowDescriptor[] = useMemo(() => {
+    const buildMarqueeItems = (sourceTopics: TopicItem[], seedIdx: number, shuffle: boolean) => {
+      const source =
+        sourceTopics.length > 0 ? sourceTopics : FALLBACK_STARTUP_TOPICS.slice(0, 8);
       const rowCopy = [...source];
-      for (let i = rowCopy.length - 1; i > 0; i--) {
-        const j = (i * 37 + rIdx * 19 + 7) % (i + 1);
-        const temp = rowCopy[i];
-        rowCopy[i] = rowCopy[j];
-        rowCopy[j] = temp;
+      if (shuffle && rowCopy.length > 1) {
+        for (let i = rowCopy.length - 1; i > 0; i--) {
+          const j = (i * 37 + seedIdx * 19 + 7) % (i + 1);
+          const temp = rowCopy[i];
+          rowCopy[i] = rowCopy[j];
+          rowCopy[j] = temp;
+        }
       }
-
       let base = [...rowCopy];
       while (base.length < MIN_ITEMS_PER_COPY) {
         base = [...base, ...rowCopy];
       }
-
       return [...base, ...base];
+    };
+
+    const descriptors: StreamRowDescriptor[] = [];
+
+    if (inProgressTopics.length > 0) {
+      descriptors.push({
+        kind: 'in-progress',
+        items: buildMarqueeItems(inProgressTopics, 0, false),
+      });
+    }
+
+    if (waitingTopics.length > 0) {
+      descriptors.push({
+        kind: 'waiting',
+        items: buildMarqueeItems(waitingTopics, 1, false),
+      });
+    }
+
+    regularRows.forEach((row, idx) => {
+      descriptors.push({
+        kind: 'regular',
+        items: buildMarqueeItems(row, idx + 2, true),
+      });
     });
-  }, [rows]);
+
+    return descriptors;
+  }, [inProgressTopics, waitingTopics, regularRows]);
+
+  const totalRowCount = allStreamRows.length;
 
   useEffect(() => {
-    for (let rIdx = 0; rIdx < dynamicRowCount; rIdx++) {
+    for (let rIdx = 0; rIdx < totalRowCount; rIdx++) {
       const marqueeEl = rowMarqueeRefs.current[rIdx];
       if (!marqueeEl) continue;
       const shouldPause = isPaused || hoveredRowRef.current === rIdx;
       marqueeEl.style.animationPlayState = shouldPause ? 'paused' : 'running';
     }
-  }, [isPaused, dynamicRowCount]);
+  }, [isPaused, totalRowCount]);
 
   const applyPillFlexboxStyles = useCallback(
     (refs: PillDomRefs, nextZ: number, isDirectlyHovered: boolean) => {
@@ -288,7 +352,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
 
       keysToProcess.forEach((key) => {
         let refs: PillDomRefs | undefined;
-        for (let r = 0; r < dynamicRowCount; r++) {
+        for (let r = 0; r < totalRowCount; r++) {
           const m = rowPillsMapRef.current.get(r);
           if (m && m.has(key)) {
             refs = m.get(key);
@@ -326,7 +390,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
         }
       });
 
-      for (let rIdx = 0; rIdx < dynamicRowCount; rIdx++) {
+      for (let rIdx = 0; rIdx < totalRowCount; rIdx++) {
         const flexEl = rowFlexRefs.current[rIdx];
         const marqueeEl = rowMarqueeRefs.current[rIdx];
         if (!flexEl) continue;
@@ -383,7 +447,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
     };
 
     animFrameIdRef.current = requestAnimationFrame(tick);
-  }, [dynamicRowCount, applyPillFlexboxStyles]);
+  }, [totalRowCount, applyPillFlexboxStyles]);
 
   useEffect(() => {
     return () => {
@@ -398,7 +462,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
     (hoveredRow: number | null) => {
       hoveredRowRef.current = hoveredRow;
 
-      for (let rIdx = 0; rIdx < dynamicRowCount; rIdx++) {
+      for (let rIdx = 0; rIdx < totalRowCount; rIdx++) {
         const marqueeEl = rowMarqueeRefs.current[rIdx];
         const flexEl = rowFlexRefs.current[rIdx];
         if (!marqueeEl) continue;
@@ -422,7 +486,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
         setStableTopics(deferred);
       }
     },
-    [dynamicRowCount]
+    [totalRowCount]
   );
 
   const handlePointerLeaveStream = useCallback(() => {
@@ -433,13 +497,40 @@ const TopicStream: React.FC<TopicStreamProps> = ({
   }, [updateRowPauseState, startHoneycombLoop]);
 
   const filteredTopics = filterQuery.trim()
-    ? stableTopics.filter((t) =>
+    ? liveTopicsPool.filter((t) =>
         t.title.toLowerCase().includes(filterQuery.toLowerCase())
       )
-    : stableTopics;
+    : liveTopicsPool;
 
-  // Helper to get classical Socratic / Greek parchment & terracotta visuals with Lucide icons
-  const getTopicVisuals = (topic: TopicItem, isListMode = false) => {
+  const filteredInProgress = useMemo(
+    () =>
+      filteredTopics.filter((t) => {
+        const activeCount = carpoolStatus[t.id]?.activeDebatesCount || 0;
+        return activeTopicId === t.id || activeCount > 0;
+      }),
+    [filteredTopics, carpoolStatus, activeTopicId]
+  );
+
+  const filteredWaiting = useMemo(
+    () =>
+      filteredTopics.filter((t) => {
+        const waitingCount = carpoolStatus[t.id]?.waitingCount || 0;
+        return waitingTopicId === t.id || waitingCount > 0;
+      }),
+    [filteredTopics, carpoolStatus, waitingTopicId]
+  );
+
+  const filteredRegular = useMemo(
+    () => filteredTopics.filter((t) => !pinnedTopicIds.has(t.id)),
+    [filteredTopics, pinnedTopicIds]
+  );
+
+  // Helper to get classical Socratic / Greek parchment & terracotta visuals (no per-topic status icon)
+  const getTopicVisuals = (
+    topic: TopicItem,
+    isListMode = false,
+    forceMode?: 'in-progress' | 'waiting' | 'regular'
+  ) => {
     const status = carpoolStatus[topic.id];
     const waitingCount = status?.waitingCount || 0;
     const activeCount = status?.activeDebatesCount || 0;
@@ -466,48 +557,64 @@ const TopicStream: React.FC<TopicStreamProps> = ({
       platformClass ||
       'bg-gray-900/95 text-gray-100 border-gray-700/90 hover:border-indigo-400 hover:text-gray-50';
 
-    // Remove 0/2 counters completely. Show MessageSquarePlus if 1 person demand, MessageSquareText if complete match.
-    let counterIndicator: React.ReactNode = null;
+    const showAsInProgress =
+      forceMode === 'in-progress' ||
+      (forceMode !== 'waiting' &&
+        forceMode !== 'regular' &&
+        (isUserDebating || activeCount > 0) &&
+        !(isUserWaiting || waitingCount > 0));
+    const showAsWaiting =
+      forceMode === 'waiting' ||
+      (forceMode !== 'regular' &&
+        !showAsInProgress &&
+        (isUserWaiting || waitingCount > 0));
 
-    if (isUserWaiting || waitingCount > 0) {
-      const activeBg = topic.platform === 'x' ? 'bg-black' : (platformClass || 'bg-amber-950/80');
+    if (showAsWaiting) {
+      const activeBg =
+        topic.platform === 'x' ? 'bg-black' : platformClass || 'bg-amber-950/80';
       badgeClass = `${activeBg} ring-1 ring-amber-500 border-amber-400 text-amber-200 ${
         isListMode ? 'hover:scale-102' : ''
       } shadow-md shadow-amber-950/40`;
-      counterIndicator = (
-        <span className="flex items-center gap-1 font-mono text-[11px] text-amber-300 font-bold flex-shrink-0" title="Demand from 1 thinker">
-          <MessageSquarePlus className="w-4 h-4 text-amber-400 animate-pulse" />
-        </span>
-      );
-    } else if (isUserDebating || activeCount > 0) {
-      const activeBg = topic.platform === 'x' ? 'bg-black' : (platformClass || 'bg-emerald-950/40');
-      badgeClass = `${activeBg} border-emerald-700/60 text-emerald-200 hover:bg-emerald-900/40`;
-      counterIndicator = (
-        <span className="flex items-center gap-1 font-mono text-[11px] text-emerald-400 font-bold flex-shrink-0" title="Active complete dialogue">
-          <MessageSquareText className="w-4 h-4 text-emerald-400" />
-        </span>
-      );
+    } else if (showAsInProgress) {
+      const activeBg =
+        topic.platform === 'x' ? 'bg-black' : platformClass || 'bg-emerald-950/40';
+      badgeClass = `${activeBg} ring-1 ring-emerald-500/60 border-emerald-500/80 text-emerald-200 hover:bg-emerald-900/40 shadow-md shadow-emerald-950/40`;
     }
 
     const platformLogoElement = topic.platform ? (
-      <span className="flex-shrink-0 flex items-center pr-1" title={`${platformLabel} Discourse`}>
-        {topic.platform === 'x' && <XLogo className="w-3.5 h-3.5 text-gray-200 flex-shrink-0" />}
-        {topic.platform === 'reddit' && <RedditLogo className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />}
-        {topic.platform === 'facebook' && <FacebookLogo className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
+      <span
+        className="flex-shrink-0 flex items-center pr-1"
+        title={`${platformLabel} Discourse`}
+      >
+        {topic.platform === 'x' && (
+          <XLogo className="w-3.5 h-3.5 text-gray-200 flex-shrink-0" />
+        )}
+        {topic.platform === 'reddit' && (
+          <RedditLogo className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+        )}
+        {topic.platform === 'facebook' && (
+          <FacebookLogo className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+        )}
       </span>
     ) : null;
 
-    return { badgeClass, counterIndicator, platformLogoElement, platformLabel };
+    return { badgeClass, platformLogoElement, platformLabel };
   };
 
   // Render List / Grid card
-  const renderListCard = (topic: TopicItem) => {
-    const { badgeClass, counterIndicator, platformLogoElement, platformLabel } =
-      getTopicVisuals(topic, true);
+  const renderListCard = (
+    topic: TopicItem,
+    forceMode?: 'in-progress' | 'waiting' | 'regular'
+  ) => {
+    const { badgeClass, platformLogoElement, platformLabel } = getTopicVisuals(
+      topic,
+      true,
+      forceMode
+    );
 
     return (
       <div
-        key={topic.id}
+        key={`${forceMode || 'reg'}-${topic.id}`}
         className={`group relative flex items-start justify-between gap-2 rounded-lg border p-3 transition-all text-left text-xs sm:text-sm font-medium ${badgeClass}`}
       >
         <button
@@ -532,12 +639,6 @@ const TopicStream: React.FC<TopicStreamProps> = ({
             </div>
           )}
         </button>
-
-        {counterIndicator && (
-          <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5 border-l border-gray-700/60 pl-2">
-            {counterIndicator}
-          </div>
-        )}
       </div>
     );
   };
@@ -547,22 +648,29 @@ const TopicStream: React.FC<TopicStreamProps> = ({
     topic: TopicItem,
     instanceKey: string,
     rIdx: number,
-    itemIdx: number
+    itemIdx: number,
+    rowKind: 'in-progress' | 'waiting' | 'regular'
   ) => {
-    const { badgeClass, counterIndicator, platformLogoElement } =
-      getTopicVisuals(topic, false);
+    const { badgeClass, platformLogoElement } = getTopicVisuals(
+      topic,
+      false,
+      rowKind
+    );
 
     const fullTargetWidth = Math.max(
       250,
-      Math.ceil(topic.title.length * 9.8 + (topic.trendTag ? 110 : 50))
+      Math.ceil(topic.title.length * 9.8 + (topic.trendTag ? 90 : 30))
     );
 
     return (
       <button
         key={instanceKey}
         ref={(btn) => {
-          if (!btn) return;
           let rowMap = rowPillsMapRef.current.get(rIdx);
+          if (!btn) {
+            rowMap?.delete(instanceKey);
+            return;
+          }
           if (!rowMap) {
             rowMap = new Map();
             rowPillsMapRef.current.set(rIdx, rowMap);
@@ -617,11 +725,6 @@ const TopicStream: React.FC<TopicStreamProps> = ({
             </span>
           )}
         </span>
-        {counterIndicator && (
-          <span className="border-l border-gray-700/60 pl-1.5 flex-shrink-0">
-            {counterIndicator}
-          </span>
-        )}
       </button>
     );
   };
@@ -707,28 +810,63 @@ const TopicStream: React.FC<TopicStreamProps> = ({
       {/* Main Topic Area */}
       {showGridView || filterQuery ? (
         /* Full Grid / List View */
-        <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5 bg-gray-950">
-          {filteredTopics.length > 0 ? (
-            filteredTopics.map((topic) => renderListCard(topic))
-          ) : (
-            <div className="col-span-full py-8 text-center text-gray-500 text-sm italic">
-              No subjects matching "{filterQuery}"
+        <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 space-y-3 bg-gray-950">
+          {/* Top of top: In-Progress Row in List View, if any */}
+          {filteredInProgress.length > 0 && (
+            <div className="space-y-1.5 pb-2 border-b border-emerald-900/40">
+              <div className="flex items-center gap-1.5 text-[11px] font-serif font-bold uppercase tracking-wider text-emerald-400">
+                <MessageSquareText className="w-3.5 h-3.5" />
+                <span>In-Progress ({filteredInProgress.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {filteredInProgress.map((topic) =>
+                  renderListCard(topic, 'in-progress')
+                )}
+              </div>
             </div>
+          )}
+
+          {/* Top: Waiting Row in List View, if any */}
+          {filteredWaiting.length > 0 && (
+            <div className="space-y-1.5 pb-2 border-b border-amber-900/40">
+              <div className="flex items-center gap-1.5 text-[11px] font-serif font-bold uppercase tracking-wider text-amber-300">
+                <MessageSquarePlus className="w-3.5 h-3.5 animate-pulse" />
+                <span>Waiting ({filteredWaiting.length})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {filteredWaiting.map((topic) => renderListCard(topic, 'waiting'))}
+              </div>
+            </div>
+          )}
+
+          {/* Regular Topics Grid */}
+          {filteredRegular.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5">
+              {filteredRegular.map((topic) => renderListCard(topic, 'regular'))}
+            </div>
+          ) : (
+            filteredInProgress.length === 0 &&
+            filteredWaiting.length === 0 && (
+              <div className="py-8 text-center text-gray-500 text-sm italic">
+                No subjects matching "{filterQuery}"
+              </div>
+            )
           )}
         </div>
       ) : (
-        /* Multi-lane Infinite Marquee Stream */
+        /* Multi-lane Infinite Marquee Stream (including In-Progress & Waiting top rows) */
         <div
           onPointerLeave={handlePointerLeaveStream}
           className="flex-1 flex flex-col justify-evenly py-0.5 sm:py-1 overflow-hidden relative select-none"
         >
-          {normalizedRows.map((rowTopics, rIdx) => {
+          {allStreamRows.map((rowDesc, rIdx) => {
             const isRowCurrentlyPaused = isPaused || hoveredRowRef.current === rIdx;
             const lockedW = lockedRowWidthRef.current[rIdx];
+            const isSpecialRow = rowDesc.kind !== 'regular';
 
             return (
               <div
-                key={rIdx}
+                key={`${rowDesc.kind}-${rIdx}`}
                 onPointerEnter={(e) => {
                   if (e.pointerType === 'touch') return;
                   if (hoveredRowRef.current !== rIdx) {
@@ -745,30 +883,68 @@ const TopicStream: React.FC<TopicStreamProps> = ({
                     startHoneycombLoop();
                   }
                 }}
-                className="flex items-center h-9 sm:h-10 overflow-hidden whitespace-nowrap relative flex-shrink-0"
+                className={`flex items-center h-9 sm:h-10 overflow-hidden whitespace-nowrap relative flex-shrink-0 ${
+                  rowDesc.kind === 'in-progress'
+                    ? 'bg-emerald-950/15 border-b border-emerald-900/40'
+                    : rowDesc.kind === 'waiting'
+                    ? 'bg-amber-950/15 border-b border-amber-900/40'
+                    : ''
+                }`}
               >
-                {/* Layer 1: CSS Marquee Track */}
-                <div
-                  ref={(el) => {
-                    rowMarqueeRefs.current[rIdx] = el;
-                  }}
-                  style={{
-                    animationDuration: `${75 + (rIdx % 4) * 12}s`,
-                    animationPlayState: isRowCurrentlyPaused ? 'paused' : 'running',
-                    width: lockedW ? `${lockedW}px` : undefined,
-                  }}
-                  className={rIdx % 2 === 0 ? 'animate-marquee' : 'animate-marquee-reverse'}
-                >
-                  {/* Layer 2: Flexbox Inner Track */}
+                {/* Pinned Left Row Label for In-Progress and Waiting Rows */}
+                {rowDesc.kind === 'in-progress' && (
+                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3.5 h-full bg-gray-950/95 border-r border-emerald-800/50 flex-shrink-0 z-20 shadow-md">
+                    <MessageSquareText className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-serif font-bold uppercase tracking-wider text-emerald-300 whitespace-nowrap">
+                      In-Progress
+                    </span>
+                  </div>
+                )}
+
+                {rowDesc.kind === 'waiting' && (
+                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3.5 h-full bg-gray-950/95 border-r border-amber-800/50 flex-shrink-0 z-20 shadow-md">
+                    <MessageSquarePlus className="w-3.5 h-3.5 text-amber-400 animate-pulse flex-shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-serif font-bold uppercase tracking-wider text-amber-300 whitespace-nowrap">
+                      Waiting
+                    </span>
+                  </div>
+                )}
+
+                {/* Animated Marquee Viewport */}
+                <div className="flex-1 flex items-center h-full overflow-hidden relative min-w-0">
+                  {/* Layer 1: CSS Marquee Track */}
                   <div
                     ref={(el) => {
-                      rowFlexRefs.current[rIdx] = el;
+                      rowMarqueeRefs.current[rIdx] = el;
                     }}
-                    className="flex items-center gap-2.5 pr-2.5 w-max will-change-transform"
+                    style={{
+                      animationDuration: `${
+                        isSpecialRow ? 80 + rIdx * 10 : 75 + (rIdx % 4) * 12
+                      }s`,
+                      animationPlayState: isRowCurrentlyPaused ? 'paused' : 'running',
+                      width: lockedW ? `${lockedW}px` : undefined,
+                    }}
+                    className={
+                      rIdx % 2 === 0 ? 'animate-marquee' : 'animate-marquee-reverse'
+                    }
                   >
-                    {rowTopics.map((topic, i) =>
-                      renderStreamPill(topic, `${topic.id}-${rIdx}-${i}`, rIdx, i)
-                    )}
+                    {/* Layer 2: Flexbox Inner Track */}
+                    <div
+                      ref={(el) => {
+                        rowFlexRefs.current[rIdx] = el;
+                      }}
+                      className="flex items-center gap-2.5 pr-2.5 w-max will-change-transform"
+                    >
+                      {rowDesc.items.map((topic, i) =>
+                        renderStreamPill(
+                          topic,
+                          `${rowDesc.kind}-${topic.id}-${rIdx}-${i}`,
+                          rIdx,
+                          i,
+                          rowDesc.kind
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

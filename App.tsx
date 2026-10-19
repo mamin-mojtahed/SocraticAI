@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import TopicStream from './components/TopicStream';
+import ConversationInfoPane from './components/ConversationInfoPane';
 import VisitorPane from './components/VisitorPane';
 import Archive from './components/Archive';
 import DebugMatchView from './components/DebugMatchView';
@@ -32,20 +33,21 @@ const App: React.FC = () => {
   const userHasManuallyResizedRef = useRef(false);
   const mainContainerRef = useRef<HTMLElement>(null);
 
-  const isInActiveOrWaitingStage = Boolean(
-    primarySocket.activeRoom || primarySocket.waitingTopic
-  );
+  const isInActiveDialogue = Boolean(primarySocket.activeRoom);
+  const isInWaitingStage = Boolean(!primarySocket.activeRoom && primarySocket.waitingTopic);
 
-  // Automatically optimize split ratio per stage on mobile screens if not manually locked
+  // Automatically optimize split ratio per stage if not manually locked
   useEffect(() => {
     if (userHasManuallyResizedRef.current) return;
     const isMobile = window.innerWidth < 640;
-    if (isMobile) {
-      setUpperHeightPercent(isInActiveOrWaitingStage ? 28 : 42);
+    if (isInActiveDialogue) {
+      setUpperHeightPercent(isMobile ? 34 : 36);
+    } else if (isInWaitingStage) {
+      setUpperHeightPercent(isMobile ? 28 : 35);
     } else {
-      setUpperHeightPercent(isInActiveOrWaitingStage ? 35 : 40);
+      setUpperHeightPercent(isMobile ? 42 : 40);
     }
-  }, [isInActiveOrWaitingStage]);
+  }, [isInActiveDialogue, isInWaitingStage]);
 
   const handleSliderPointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -343,8 +345,12 @@ const App: React.FC = () => {
 
           {/* Action 2: Archive */}
           <button
-            onClick={() => setIsArchiveOpen(true)}
-            className="px-2 sm:px-2.5 py-1.5 sm:py-1 rounded-md bg-gray-900 hover:bg-gray-800 border border-gray-700/80 text-gray-200 hover:text-gray-50 transition-colors text-xs font-medium flex items-center gap-1.5 relative cursor-pointer"
+            onClick={() => setIsArchiveOpen((prev) => !prev)}
+            className={`px-2 sm:px-2.5 py-1.5 sm:py-1 rounded-md border transition-all text-xs font-medium flex items-center gap-1.5 relative cursor-pointer ${
+              isArchiveOpen
+                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500 ring-1 ring-indigo-500'
+                : 'bg-gray-900 hover:bg-gray-800 border-gray-700/80 text-gray-200 hover:text-gray-50'
+            }`}
             title={`Scrolls & Archive (${primarySocket.archivedDebates.length})`}
           >
             <ArchiveLucide className="w-3.5 h-3.5 flex-shrink-0" />
@@ -363,19 +369,29 @@ const App: React.FC = () => {
           isResizing ? 'cursor-row-resize select-none pointer-events-none' : ''
         }`}
       >
-        {/* UPPER HALF: Dynamic Topic Stream Pool */}
+        {/* UPPER HALF: Conversation Info (when dialogue starts) or Dynamic Topic Stream Pool */}
         <section
           style={{ height: `${upperHeightPercent}%` }}
           className="w-full flex-shrink-0 relative overflow-hidden bg-gray-950 pointer-events-auto"
         >
-          <TopicStream
-            topics={primarySocket.topics}
-            carpoolStatus={primarySocket.carpoolStatus}
-            currentVisitor={primarySocket.visitor}
-            waitingTopicId={primarySocket.waitingTopic?.topicId || null}
-            activeTopicId={primarySocket.activeRoom?.topicId || null}
-            onTopicSelect={handleTopicSelectFromStream}
-          />
+          {primarySocket.activeRoom ? (
+            <ConversationInfoPane
+              room={primarySocket.activeRoom}
+              currentVisitor={primarySocket.visitor}
+              topics={primarySocket.topics}
+              opponentTyping={primarySocket.opponentTyping}
+              onLeaveDebate={primarySocket.leaveDebate}
+            />
+          ) : (
+            <TopicStream
+              topics={primarySocket.topics}
+              carpoolStatus={primarySocket.carpoolStatus}
+              currentVisitor={primarySocket.visitor}
+              waitingTopicId={primarySocket.waitingTopic?.topicId || null}
+              activeTopicId={primarySocket.activeRoom?.topicId || null}
+              onTopicSelect={handleTopicSelectFromStream}
+            />
+          )}
         </section>
 
         {/* DRAGGABLE RESIZER SLIDER BAR (Touch-friendly with expanded invisible hitbox) */}

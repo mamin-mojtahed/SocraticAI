@@ -847,11 +847,51 @@ async function start() {
 
                 if (bothAccepted) {
                   // Both accepted! Conclude match finding and launch debate room
+                  const userAOriginalTopic = waitingParticipants.get(userA.id)?.topicTitle;
+                  const userBOriginalTopic = waitingParticipants.get(userB.id)?.topicTitle;
+
                   pendingBridgeMatches.delete(bridgeId);
                   removeVisitorFromAllWaitingQueues(userA.id);
                   removeVisitorFromAllWaitingQueues(userB.id);
 
                   const debateTopic = topic || prop.topic;
+                  let bridgeTopicItem = topics.find(
+                    (t) => t.title.toLowerCase() === debateTopic.toLowerCase()
+                  );
+                  if (!bridgeTopicItem) {
+                    const bridgeTopicId = `bridge-${uuidv4().substring(0, 6)}`;
+                    bridgeTopicItem = {
+                      id: bridgeTopicId,
+                      title: debateTopic,
+                      createdAt: Date.now(),
+                      createdBy: 'Socratic Synthesis',
+                      rowIndex: 0,
+                    };
+                    topics.unshift(bridgeTopicItem);
+                    carpoolStatus.set(bridgeTopicId, {
+                      topicId: bridgeTopicId,
+                      waitingCount: 0,
+                      waitingUsers: [],
+                      activeDebatesCount: 1,
+                    });
+                    broadcast({
+                      type: 'topic:added',
+                      payload: {
+                        topic: bridgeTopicItem,
+                        carpoolStatus: carpoolStatus.get(bridgeTopicId)!,
+                      },
+                    });
+                  } else {
+                    const carpool = carpoolStatus.get(bridgeTopicItem.id) || {
+                      topicId: bridgeTopicItem.id,
+                      waitingCount: 0,
+                      waitingUsers: [],
+                      activeDebatesCount: 0,
+                    };
+                    carpool.activeDebatesCount += 1;
+                    carpoolStatus.set(bridgeTopicItem.id, carpool);
+                  }
+
                   const newRoomId = `room-${uuidv4()}`;
                   const systemWelcomeMessage: ChatMessage = {
                     id: uuidv4(),
@@ -865,13 +905,18 @@ async function start() {
 
                   const newRoom: DebateRoom = {
                     id: newRoomId,
-                    topicId: `bridge-${uuidv4().substring(0, 6)}`,
+                    topicId: bridgeTopicItem.id,
                     topicTitle: debateTopic,
                     status: 'active',
                     debater1: userA,
                     debater2: userB,
                     messages: [systemWelcomeMessage],
                     createdAt: Date.now(),
+                    isBridgeMatch: true,
+                    closeness: prop.closeness,
+                    rationale: prop.rationale,
+                    debater1OriginalTopic: userAOriginalTopic,
+                    debater2OriginalTopic: userBOriginalTopic,
                   };
 
                   activeRooms.set(newRoomId, newRoom);
