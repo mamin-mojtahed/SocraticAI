@@ -808,21 +808,21 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
     Boolean(activeEmbeddingModel);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-sm animate-fade-in select-none">
-      <div className="relative w-full max-w-5xl h-[95vh] sm:h-[90vh] bg-gray-900 border border-gray-700/80 rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white text-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-4 bg-black/85 backdrop-blur-sm animate-fade-in select-none">
+      <div className="relative w-full max-w-5xl h-[96dvh] sm:h-[90vh] bg-gray-900 border border-gray-700/80 rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white text-xs">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-3.5 sm:px-5 py-2.5 sm:py-3 bg-gray-950 border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 bg-gray-950 border-b border-gray-800 flex-shrink-0 gap-2">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 flex-shrink-0">
               <Network className="w-4 h-4 sm:w-5 sm:h-5" />
             </span>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <h2 className="font-bold text-xs sm:text-base text-gray-100 tracking-wide truncate font-serif">
                   Dialogue &amp; Harmony Graph
                 </h2>
                 <span
-                  className={`px-2 py-0.5 rounded-full font-mono text-[9px] sm:text-[10px] font-semibold flex items-center gap-1 border flex-shrink-0 ${
+                  className={`hidden sm:flex px-2 py-0.5 rounded-full font-mono text-[9px] sm:text-[10px] font-semibold items-center gap-1 border flex-shrink-0 ${
                     isFallbackModel
                       ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
                       : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40'
@@ -848,8 +848,8 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
                 title="Re-embed participant stances and recalculate pairwise cosine similarity"
               >
                 <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
-                <span className="hidden xs:inline">Evaluate Embeddings</span>
-                <span className="xs:hidden">Eval</span>
+                <span className="hidden sm:inline">Evaluate Embeddings</span>
+                <span className="sm:hidden">Evaluate</span>
               </button>
             )}
 
@@ -863,7 +863,7 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
         </div>
 
         {/* Tab Switcher & Match Threshold Control */}
-        <div className="flex items-center justify-between px-3.5 sm:px-5 py-1.5 sm:py-2 bg-gray-950/70 border-b border-gray-800 text-xs font-semibold flex-shrink-0 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-5 py-1.5 sm:py-2 bg-gray-950/70 border-b border-gray-800 text-xs font-semibold flex-shrink-0 gap-1.5 sm:gap-2">
           <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto">
             <button
               onClick={() => setActiveTab('graph')}
@@ -890,14 +890,16 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
           </div>
 
           {/* Interactive Match Threshold Control */}
-          <div className="flex items-center gap-2 flex-shrink-0 bg-gray-900/90 border border-gray-800 px-2.5 py-1 rounded-lg">
-            <Sliders className="w-3 h-3 text-emerald-400 hidden sm:inline" />
-            <span className="text-[10px] sm:text-[11px] text-gray-300 font-mono">
-              Match Threshold:{' '}
-              <strong className="text-emerald-400">
-                ≥ {matchThreshold}% ({(matchThreshold / 100).toFixed(2)} cos)
-              </strong>
-            </span>
+          <div className="flex items-center justify-between sm:justify-start gap-2 flex-shrink-0 bg-gray-900/90 border border-gray-800 px-2.5 py-1 rounded-lg">
+            <div className="flex items-center gap-1.5">
+              <Sliders className="w-3 h-3 text-emerald-400 hidden sm:inline" />
+              <span className="text-[10px] sm:text-[11px] text-gray-300 font-mono">
+                Match Threshold:{' '}
+                <strong className="text-emerald-400">
+                  ≥ {matchThreshold}% ({(matchThreshold / 100).toFixed(2)} cos)
+                </strong>
+              </span>
+            </div>
             {onSetMatchThreshold && (
               <div className="flex items-center gap-1 ml-1">
                 <input
@@ -907,7 +909,7 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
                   step={5}
                   value={matchThreshold}
                   onChange={(e) => onSetMatchThreshold(Number(e.target.value))}
-                  className="w-16 sm:w-20 accent-emerald-500 cursor-pointer h-1 bg-gray-700 rounded-lg"
+                  className="w-20 sm:w-20 accent-emerald-500 cursor-pointer h-1 bg-gray-700 rounded-lg"
                   title="Adjust Cosine Similarity Threshold for Matchmaking"
                 />
               </div>
@@ -920,7 +922,7 @@ export const DebugMatchView: React.FC<DebugMatchViewProps> = ({
           {activeTab === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-y-auto min-h-0">
               {/* NODE GRAPH FRAME */}
-              <div className="flex-1 relative w-full min-h-[340px] sm:min-h-[440px] overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 flex-shrink-0">
+              <div className="flex-1 relative w-full min-h-[220px] sm:min-h-[420px] overflow-hidden bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 flex-shrink-0">
                 <svg
                   ref={svgRef}
                   viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}

@@ -104,10 +104,10 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 border-t border-gray-800 p-3 sm:p-4 overflow-hidden relative">
+    <div className="flex flex-col h-full bg-gray-900 border-t border-gray-800 p-2.5 sm:p-4 overflow-hidden relative">
       {/* SYNCHRONIZED NOTICE BANNER */}
       {bridgeNotice && (
-        <div className="absolute top-2 left-2 right-2 z-50 p-2.5 rounded-lg bg-gray-850/95 border border-indigo-500/50 shadow-xl flex items-center justify-between text-xs animate-fade-in backdrop-blur-md">
+        <div className="absolute top-2 left-2 right-2 z-50 p-2 sm:p-2.5 rounded-lg bg-gray-850/95 border border-indigo-500/50 shadow-xl flex items-center justify-between text-xs animate-fade-in backdrop-blur-md">
           <div className="flex items-center gap-2 truncate">
             <MessageCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
             <span className="text-gray-200 truncate">{bridgeNotice.message}</span>
@@ -126,18 +126,18 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
       {/* SYNTHESIZED BRIDGE DIALOGUE PROMPT BANNER */}
       {bridgePrompt && (
         <div
-          className={`absolute top-2 left-2 right-2 z-40 p-4 rounded-xl bg-gradient-to-r ${
+          className={`absolute top-2 left-2 right-2 z-40 max-h-[calc(100%-1rem)] overflow-y-auto p-3 sm:p-4 rounded-xl bg-gradient-to-r ${
             hasOpponentAccepted && !hasMeAccepted
               ? 'from-gray-950 via-indigo-950 to-gray-900 border-2 border-emerald-500 ring-2 ring-emerald-500/40 animate-pulse'
               : hasMeAccepted
               ? 'from-gray-950 via-gray-900 to-indigo-950 border-2 border-indigo-500/80'
               : 'from-gray-950 via-indigo-950 to-purple-950 border-2 border-indigo-400 shadow-2xl animate-fade-in'
-          } text-gray-100 space-y-3 shadow-2xl`}
+          } text-gray-100 space-y-2.5 sm:space-y-3 shadow-2xl`}
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <span
-                className={`p-1.5 rounded-md ${
+                className={`p-1.5 rounded-md flex-shrink-0 ${
                   hasOpponentAccepted
                     ? 'bg-emerald-500/30 text-emerald-300'
                     : 'bg-indigo-500/30 text-indigo-300'
@@ -145,9 +145,9 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
               >
                 <Sparkles className="w-4 h-4" />
               </span>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-indigo-300 tracking-wide uppercase font-serif">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <span className="font-bold text-xs sm:text-sm text-indigo-300 tracking-wide uppercase font-serif">
                     {hasOpponentAccepted && !hasMeAccepted
                       ? `${bridgePrompt.opponentName} Welcomes Dialogue with You!`
                       : hasMeAccepted
@@ -158,7 +158,7 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                     {bridgePrompt.closeness}% Harmony
                   </span>
                 </div>
-                <p className="text-xs text-gray-200 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-gray-200 mt-0.5">
                   {hasMeAccepted && !hasOpponentAccepted ? (
                     <>
                       You have assented. Awaiting{' '}
@@ -197,10 +197,10 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
           </div>
 
           {/* Bridge Topic Box */}
-          <div className="p-2.5 rounded-lg bg-gray-900/90 border border-indigo-500/40 space-y-1">
+          <div className="p-2 sm:p-2.5 rounded-lg bg-gray-900/90 border border-indigo-500/40 space-y-1">
             <div className="flex items-center justify-between gap-2 text-[10px] text-gray-400">
-              <span className="uppercase font-bold font-serif">Shared Question of Inquiry:</span>
-              <span className="font-mono text-indigo-300 truncate max-w-[260px]">
+              <span className="uppercase font-bold font-serif flex-shrink-0">Shared Inquiry:</span>
+              <span className="font-mono text-indigo-300 truncate max-w-[180px] sm:max-w-[260px]">
                 "{bridgePrompt.myOriginalTopic}" ⟷ "{bridgePrompt.theirOriginalTopic}"
               </span>
             </div>
@@ -210,12 +210,12 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-0.5">
             <button
               onClick={() => onDeclineBridgeMatch(bridgePrompt.id)}
-              className="px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition-colors"
+              className="px-2.5 sm:px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition-colors cursor-pointer"
             >
-              {hasMeAccepted ? 'Withdraw / Keep Contemplating' : 'Continue Contemplating'}
+              {hasMeAccepted ? 'Withdraw' : 'Continue Contemplating'}
             </button>
             <button
               disabled={hasMeAccepted}
@@ -226,7 +226,7 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                   bridgePrompt.proposedBridgeTopic
                 )
               }
-              className={`px-4 py-1.5 rounded text-gray-100 text-xs font-bold shadow-md transition-all flex items-center gap-1.5 ${
+              className={`px-3 sm:px-4 py-1.5 rounded text-gray-100 text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
                 hasMeAccepted
                   ? 'bg-indigo-900/60 border border-indigo-700/60 text-indigo-300 cursor-not-allowed opacity-90'
                   : hasOpponentAccepted
@@ -248,17 +248,17 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden max-w-2xl mx-auto w-full">
+      <div className="flex-1 flex flex-col overflow-hidden max-w-2xl mx-auto w-full min-h-0">
         {/* Top Waiting Info Strip with Inline Topic Edit */}
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-800 flex-shrink-0 text-xs gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center justify-between pb-1.5 sm:pb-2 mb-1.5 sm:mb-2 border-b border-gray-800 flex-shrink-0 text-xs gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
             <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping flex-shrink-0"></span>
-            <span className="text-gray-400 text-[11px] uppercase font-semibold font-serif flex-shrink-0">
+            <span className="hidden sm:inline text-gray-400 text-[11px] uppercase font-semibold font-serif flex-shrink-0">
               Contemplating:
             </span>
 
             {isEditingTopic ? (
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <div className="flex items-center gap-1 flex-1 min-w-0">
                 <input
                   type="text"
                   value={editedTopicTitle}
@@ -271,12 +271,12 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                     }
                   }}
                   autoFocus
-                  className="flex-1 bg-gray-950 border border-indigo-500 rounded px-2.5 py-1 text-xs sm:text-sm text-gray-100 focus:outline-none"
+                  className="flex-1 min-w-0 bg-gray-950 border border-indigo-500 rounded px-2 py-1 text-xs sm:text-sm text-gray-100 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleSaveTopicTitle}
-                  className="p-1 rounded bg-indigo-600 hover:bg-indigo-500 text-gray-100 cursor-pointer"
+                  className="p-1 rounded bg-indigo-600 hover:bg-indigo-500 text-gray-100 cursor-pointer flex-shrink-0"
                   title="Save edited inquiry"
                 >
                   <Check className="w-3.5 h-3.5" />
@@ -287,15 +287,15 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                     setIsEditingTopic(false);
                     setEditedTopicTitle(topicTitle);
                   }}
-                  className="p-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 cursor-pointer"
+                  className="p-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 cursor-pointer flex-shrink-0"
                   title="Cancel edit"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-bold text-gray-100 text-xs sm:text-sm truncate max-w-[200px] sm:max-w-sm">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <span className="font-bold text-gray-100 text-xs sm:text-sm truncate">
                   "{topicTitle}"
                 </span>
                 <button
@@ -313,7 +313,7 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={onCancel}
               className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors py-1 px-2 rounded hover:bg-red-950/40 cursor-pointer"
@@ -325,38 +325,38 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
         </div>
 
         {/* 2-Seat Symposium Visualization */}
-        <div className="grid grid-cols-2 gap-2.5 py-1 flex-shrink-0">
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5 py-0.5 sm:py-1 flex-shrink-0">
           {/* Seat 1: User */}
-          <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-850/90 border border-indigo-500/50">
+          <div className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg bg-gray-850/90 border border-indigo-500/50 min-w-0">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-gray-100 text-xs font-bold flex-shrink-0 shadow border border-white/15 font-serif"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-gray-100 text-xs font-bold flex-shrink-0 shadow border border-white/15 font-serif"
               style={{ backgroundColor: currentVisitor?.color || '#c88a32' }}
             >
               {currentVisitor?.name?.charAt(0) || 'S'}
             </div>
-            <div className="truncate">
+            <div className="truncate min-w-0">
               <p className="font-semibold text-xs sm:text-sm text-gray-100 truncate font-serif">
                 {currentVisitor?.name || 'You'}
               </p>
-              <span className="text-[11px] text-indigo-400 font-medium">
+              <span className="text-[10px] sm:text-[11px] text-indigo-400 font-medium truncate block">
                 Present (First Chair)
               </span>
             </div>
           </div>
 
           {/* Seat 2: Waiting/Searching */}
-          <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-850/40 border border-dashed border-amber-500/40">
-            <div className="relative w-8 h-8 flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg bg-gray-850/40 border border-dashed border-amber-500/40 min-w-0">
+            <div className="relative w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0">
               <div className="absolute inset-0 rounded-full border border-amber-400 animate-ping opacity-40"></div>
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 text-xs font-bold">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 text-xs font-bold">
                 ?
               </div>
             </div>
-            <div className="truncate">
+            <div className="truncate min-w-0">
               <p className="font-semibold text-xs sm:text-sm text-gray-300 truncate font-serif">
                 Awaiting Companion...
               </p>
-              <span className="text-[11px] text-amber-400 font-medium animate-pulse">
+              <span className="text-[10px] sm:text-[11px] text-amber-400 font-medium animate-pulse truncate block">
                 Seeking Interlocutor (Second Chair)
               </span>
             </div>
@@ -364,24 +364,24 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
         </div>
 
         {/* Socratic Prelude / Reflection Area */}
-        <div className="flex-1 flex flex-col mt-2 rounded-lg bg-gray-950/80 border border-gray-800 overflow-hidden">
+        <div className="flex-1 flex flex-col mt-1.5 sm:mt-2 rounded-lg bg-gray-950/80 border border-gray-800 overflow-hidden min-h-0">
           {!isAiPracticeActive ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-4 text-center space-y-3 my-auto">
-              <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300">
-                <MessagesSquare className="w-5 h-5" />
+            <div className="flex-1 flex flex-col items-center justify-center p-2.5 sm:p-4 text-center space-y-2 sm:space-y-3 my-auto overflow-y-auto">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 flex-shrink-0">
+                <MessagesSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-100 text-sm font-serif tracking-wide">
+                <h3 className="font-bold text-gray-100 text-xs sm:text-sm font-serif tracking-wide">
                   Socratic Prelude &amp; Reflection
                 </h3>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pt-0.5">
                 <button
                   onClick={handleStartPracticeClick}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-gray-100 font-semibold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-gray-100 font-semibold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span>Begin Socratic Reflection</span>
                 </button>
 
@@ -412,16 +412,16 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               {/* Warmup Header with Sliding Toggle Button */}
-              <div className="flex items-center justify-between px-3.5 py-2 bg-gray-900 border-b border-gray-800 text-xs">
-                <div className="flex items-center gap-1.5 text-indigo-300 font-semibold font-serif">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Socratic Reflection Chat</span>
+              <div className="flex items-center justify-between px-3 sm:px-3.5 py-1.5 sm:py-2 bg-gray-900 border-b border-gray-800 text-xs flex-shrink-0">
+                <div className="flex items-center gap-1.5 text-indigo-300 font-semibold font-serif truncate">
+                  <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">Socratic Reflection Chat</span>
                 </div>
 
                 {/* Sliding Toggle Switch for AI Response */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <span
                     className={`text-xs font-medium transition-colors ${
                       aiResponseEnabled ? 'text-indigo-300' : 'text-gray-500'
@@ -453,9 +453,9 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
               </div>
 
               {/* Practice Messages Feed */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-3 text-xs sm:text-sm">
+              <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 space-y-2.5 sm:space-y-3 text-xs sm:text-sm min-h-0">
                 {practiceMessages.length === 0 && (
-                  <p className="text-center text-gray-400 text-xs py-4 italic">
+                  <p className="text-center text-gray-400 text-xs py-3 sm:py-4 italic">
                     {aiResponseEnabled
                       ? 'Offer a thought or question below at any moment.'
                       : 'Socratic Guide replies are paused. Inscribe your reflections below to align with a fellow thinker.'}
@@ -473,7 +473,7 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                         <span>{isUser ? 'You' : 'Socratic Guide'}</span>
                       </div>
                       <div
-                        className={`rounded-lg px-3.5 py-2 max-w-[85%] leading-relaxed ${
+                        className={`rounded-lg px-3 sm:px-3.5 py-1.5 sm:py-2 max-w-[88%] sm:max-w-[85%] leading-relaxed ${
                           isUser
                             ? 'bg-indigo-600 text-gray-100 rounded-tr-none'
                             : 'bg-gray-850 text-gray-100 border border-gray-700/80 rounded-tl-none'
@@ -502,7 +502,7 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
               {/* Practice Chat Input Bar (Uses Lucide Send icon) */}
               <form
                 onSubmit={handleSendPractice}
-                className="flex items-center gap-2 p-2.5 bg-gray-900 border-t border-gray-800 flex-shrink-0"
+                className="flex items-center gap-2 p-2 sm:p-2.5 bg-gray-900 border-t border-gray-800 flex-shrink-0"
               >
                 <input
                   type="text"
@@ -513,12 +513,12 @@ const WaitingLobby: React.FC<WaitingLobbyProps> = ({
                       ? 'Reply to Socratic Guide...'
                       : 'Record a reflection (Guide off)...'
                   }
-                  className="flex-1 rounded-full bg-gray-950 px-4 py-2 text-xs sm:text-sm text-gray-100 placeholder-gray-500 border border-gray-700/80 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 min-w-0 rounded-full bg-gray-950 px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-100 placeholder-gray-500 border border-gray-700/80 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 <button
                   type="submit"
                   disabled={!practiceInput.trim()}
-                  className="p-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-gray-100 transition-colors disabled:bg-gray-800 disabled:text-gray-600 cursor-pointer"
+                  className="p-2 rounded-full bg-indigo-600 hover:bg-indigo-500 text-gray-100 transition-colors disabled:bg-gray-800 disabled:text-gray-600 cursor-pointer flex-shrink-0"
                   title="Send reflection message"
                 >
                   <Send className="h-4 w-4" />

@@ -585,7 +585,8 @@ const TopicStream: React.FC<TopicStreamProps> = ({
           }
         }}
         onClick={() => onTopicSelect(topic.id)}
-        onPointerEnter={() => {
+        onPointerEnter={(e) => {
+          if (e.pointerType === 'touch') return;
           if (hoveredRowRef.current !== rIdx) {
             updateRowPauseState(rIdx);
           }
@@ -596,11 +597,11 @@ const TopicStream: React.FC<TopicStreamProps> = ({
             startHoneycombLoop();
           }
         }}
-        className={`group relative flex items-center justify-between gap-2 rounded-md border px-3.5 py-1 text-left flex-shrink-0 cursor-pointer text-[13px] font-medium select-none transition-colors ${badgeClass}`}
+        className={`group relative flex items-center justify-between gap-2 rounded-md border px-3 sm:px-3.5 py-1 text-left flex-shrink-0 cursor-pointer text-xs sm:text-[13px] font-medium select-none transition-colors ${badgeClass}`}
       >
         <span
           data-role="title-wrap"
-          className="flex items-center gap-1.5 max-w-[185px] sm:max-w-[215px] overflow-hidden"
+          className="flex items-center gap-1.5 max-w-[175px] sm:max-w-[215px] overflow-hidden"
         >
           {platformLogoElement}
           <span data-role="title-text" className="truncate group-hover:text-gray-50">
@@ -631,30 +632,30 @@ const TopicStream: React.FC<TopicStreamProps> = ({
       className="relative flex flex-col h-full w-full overflow-hidden bg-gray-950"
     >
       {/* Top Header Toolbar */}
-      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-950 border-b border-gray-800 z-30 backdrop-blur-sm flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-widest font-bold text-gray-200 font-serif">
+      <div className="flex items-center justify-between gap-2 px-2.5 sm:px-4 py-1.5 bg-gray-950 border-b border-gray-800 z-30 backdrop-blur-sm flex-shrink-0">
+        <div className="flex items-center flex-shrink-0">
+          <span className="text-[11px] sm:text-xs uppercase tracking-wider sm:tracking-widest font-bold text-gray-200 font-serif whitespace-nowrap">
             Subjects of Inquiry
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 justify-end">
           {/* Quick Search */}
-          <div className="relative flex items-center">
+          <div className="relative flex items-center min-w-0 max-w-[130px] sm:max-w-[200px] w-full">
             <input
               type="text"
-              placeholder="Filter subjects of inquiry..."
+              placeholder="Filter..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
-              className="w-32 sm:w-48 bg-gray-900 border border-gray-700/80 rounded-md pl-7 pr-2.5 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full min-w-0 bg-gray-900 border border-gray-700/80 rounded-md pl-6 sm:pl-7 pr-6 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500"
             />
-            <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2 pointer-events-none" />
+            <Search className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 absolute left-2 pointer-events-none" />
             {filterQuery && (
               <button
                 onClick={() => setFilterQuery('')}
-                className="absolute right-2 text-gray-500 hover:text-gray-100"
+                className="absolute right-1.5 text-gray-500 hover:text-gray-100 p-0.5"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
             )}
           </div>
@@ -706,7 +707,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
       {/* Main Topic Area */}
       {showGridView || filterQuery ? (
         /* Full Grid / List View */
-        <div className="flex-1 overflow-y-auto p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 bg-gray-950">
+        <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5 bg-gray-950">
           {filteredTopics.length > 0 ? (
             filteredTopics.map((topic) => renderListCard(topic))
           ) : (
@@ -719,7 +720,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
         /* Multi-lane Infinite Marquee Stream */
         <div
           onPointerLeave={handlePointerLeaveStream}
-          className="flex-1 flex flex-col justify-evenly py-1 overflow-hidden relative select-none"
+          className="flex-1 flex flex-col justify-evenly py-0.5 sm:py-1 overflow-hidden relative select-none"
         >
           {normalizedRows.map((rowTopics, rIdx) => {
             const isRowCurrentlyPaused = isPaused || hoveredRowRef.current === rIdx;
@@ -728,13 +729,15 @@ const TopicStream: React.FC<TopicStreamProps> = ({
             return (
               <div
                 key={rIdx}
-                onPointerEnter={() => {
+                onPointerEnter={(e) => {
+                  if (e.pointerType === 'touch') return;
                   if (hoveredRowRef.current !== rIdx) {
                     updateRowPauseState(rIdx);
                     startHoneycombLoop();
                   }
                 }}
-                onPointerLeave={() => {
+                onPointerLeave={(e) => {
+                  if (e.pointerType === 'touch') return;
                   if (hoveredRowRef.current === rIdx) {
                     hoveredKeyRef.current = null;
                     hoveredItemIdxRef.current = null;
@@ -742,7 +745,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
                     startHoneycombLoop();
                   }
                 }}
-                className="flex items-center h-10 overflow-hidden whitespace-nowrap relative flex-shrink-0"
+                className="flex items-center h-9 sm:h-10 overflow-hidden whitespace-nowrap relative flex-shrink-0"
               >
                 {/* Layer 1: CSS Marquee Track */}
                 <div
