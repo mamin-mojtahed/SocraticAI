@@ -104,6 +104,15 @@ export class AiMatchmakerService {
     matchThreshold: number;
     activeEmbeddingModel: string;
   } {
+    const participantIds = new Set(participants.map((p) => p.visitorId));
+
+    // Prune stale pairs when participants disconnect or leave
+    for (const [key, pair] of this.pairEvaluations.entries()) {
+      if (!participantIds.has(pair.userA.id) || !participantIds.has(pair.userB.id)) {
+        this.pairEvaluations.delete(key);
+      }
+    }
+
     const nodes: TopicNode[] = participants.map((p) => ({
       visitorId: p.visitorId,
       visitorName: p.visitorName,
@@ -127,6 +136,43 @@ export class AiMatchmakerService {
       matchThreshold: this.matchThreshold,
       activeEmbeddingModel: this.activeEmbeddingModel,
     };
+  }
+
+  /**
+   * Retrieve existing ready matches without re-triggering embedding evaluation or creating logs
+   */
+  public getExistingReadyMatches(participants: WaitingParticipant[]): BridgeMatchPrompt[] {
+    const readyMatches: BridgeMatchPrompt[] = [];
+    const pMap = new Map(participants.map((p) => [p.visitorId, p]));
+
+    for (const pair of this.pairEvaluations.values()) {
+      if (pair.isReady) {
+        const userA = pMap.get(pair.userA.id);
+        const userB = pMap.get(pair.userB.id);
+        if (userA && userB) {
+          readyMatches.push({
+            id: uuidv4(),
+            opponentId: userB.visitorId,
+            opponentName: userB.visitorName,
+            opponentColor: userB.visitorColor,
+            myOriginalTopic: userA.topicTitle,
+            theirOriginalTopic: userB.topicTitle,
+            proposedBridgeTopic: pair.bridgeTopic,
+            closeness: pair.closeness,
+            cosineSimilarity: pair.cosineSimilarity,
+            threshold: pair.threshold,
+            embeddingModel: pair.embeddingModel,
+            isFallbackModel: pair.isFallbackModel,
+            rationale: pair.commonGround,
+            userAId: userA.visitorId,
+            userBId: userB.visitorId,
+            acceptedUsers: [],
+            status: 'offered',
+          });
+        }
+      }
+    }
+    return readyMatches;
   }
 
   /**
@@ -684,6 +730,8 @@ Generate the natural conversational "reply" (for the user) and the backend-only 
     const rawCosine = this.computeRawCosineSimilarity(embA.vector, embB.vector);
     const isFallback = Boolean(embA.isFallback || embB.isFallback);
 
+    // Accurate calibrated similarity matching: corrects for high-dimensional embedding
+    // anisotropy so that thematic resonance is measured accurately as before
     const calibratedSimilarity = this.normalizeEmbeddingSimilarity(
       rawCosine,
       textA,
@@ -693,6 +741,9 @@ Generate the natural conversational "reply" (for the user) and the backend-only 
 
     const closeness = Math.max(0, Math.min(100, Math.round(calibratedSimilarity * 100)));
     const isReady = closeness >= this.matchThreshold;
+
+    // Actual mathematical cosine similarity of the vectors (0.0000 - 1.0000 cos)
+    const cosineSimilarity = Math.max(0, Math.min(1, Number(rawCosine.toFixed(4))));
 
     const { bridgeTopic, commonGround } = await this.synthesizeBridgeTopic(
       userA,
@@ -717,7 +768,7 @@ Generate the natural conversational "reply" (for the user) and the backend-only 
         color: userB.visitorColor,
       },
       closeness,
-      cosineSimilarity: calibratedSimilarity,
+      cosineSimilarity,
       threshold: this.matchThreshold,
       embeddingModel: embA.model,
       isFallbackModel: isFallback,

@@ -37,7 +37,7 @@ const archivedDebates: ArchivedDebate[] = [];
 const visitorSockets = new Map<string, Set<WebSocket>>();
 const socketToVisitor = new Map<WebSocket, string>();
 
-// Disconnect grace timers: visitorId -> NodeJS.Timeout
+// Disconnect grace timers: visitorId -> NodeJS.Timeout (for carpool waiting queue purge)
 const disconnectTimers = new Map<string, NodeJS.Timeout>();
 
 // AI Matchmaker Service & Waiting Participants
@@ -179,11 +179,20 @@ function getCarpoolRecord(): Record<string, TopicCarpoolStatus> {
   return record;
 }
 
-// Count online unique visitors
+// Count online unique visitors strictly based on currently active open WebSockets
 function getOnlineVisitorCount(): number {
   let count = 0;
-  for (const [_, v] of visitors.entries()) {
-    if (v.isOnline) count++;
+  for (const [_, sockets] of visitorSockets.entries()) {
+    let hasLiveSocket = false;
+    for (const ws of sockets) {
+      if (ws.readyState === WebSocket.OPEN) {
+        hasLiveSocket = true;
+        break;
+      }
+    }
+    if (hasLiveSocket) {
+      count++;
+    }
   }
   return Math.max(1, count);
 }
@@ -229,15 +238,58 @@ function broadcastDebugUpdate() {
   });
 }
 
-// Broadcast presence stats
-function broadcastPresence() {
-  broadcast({
-    type: 'presence:update',
-    payload: {
-      onlineCount: getOnlineVisitorCount(),
-      activeDebatesCount: activeRooms.size,
-    },
-  });
+// Count distinct topics that currently have people waiting
+function getWaitingTopicsCount(): number {
+  let count = 0;
+  for (const status of carpoolStatus.values()) {
+    if (status.waitingUsers.length > 0) {
+      count++;
+    }
+  }
+  return count;
+}
+
+// Cached last presence state to prevent duplicate broadcasts and jitter
+let lastPresence = { onlineCount: -1, activeDebatesCount: -1, waitingTopicsCount: -1 };
+let presenceDebounceTimer: NodeJS.Timeout | null = null;
+
+// Smooth, debounced broadcast of presence stats (online thinkers, topics waiting, active dialogues)
+function broadcastPresence(immediate = false) {
+  const execute = () => {
+    const onlineCount = getOnlineVisitorCount();
+    const activeDebatesCount = activeRooms.size;
+    const waitingTopicsCount = getWaitingTopicsCount();
+
+    if (
+      onlineCount === lastPresence.onlineCount &&
+      activeDebatesCount === lastPresence.activeDebatesCount &&
+      waitingTopicsCount === lastPresence.waitingTopicsCount
+    ) {
+      return;
+    }
+
+    lastPresence = { onlineCount, activeDebatesCount, waitingTopicsCount };
+
+    broadcast({
+      type: 'presence:update',
+      payload: {
+        onlineCount,
+        activeDebatesCount,
+        waitingTopicsCount,
+      },
+    });
+  };
+
+  if (immediate) {
+    if (presenceDebounceTimer) {
+      clearTimeout(presenceDebounceTimer);
+      presenceDebounceTimer = null;
+    }
+    execute();
+  } else {
+    if (presenceDebounceTimer) clearTimeout(presenceDebounceTimer);
+    presenceDebounceTimer = setTimeout(execute, 250);
+  }
 }
 
 function removeVisitorFromAllWaitingQueues(visitorId: string): boolean {
@@ -269,12 +321,7 @@ function removeVisitorFromAllWaitingQueues(visitorId: string): boolean {
 }
 
 // Helper to trigger pairwise evaluation and broadcast bridge prompts as soon as at least one user is suitable
-async function evaluateAndNotifyMatches() {
-  const participants = Array.from(waitingParticipants.values());
-  const { readyMatches } = await aiMatchmaker.evaluatePairwiseCloseness(participants);
-
-  broadcastDebugUpdate();
-
+function notifyReadyMatches(readyMatches: BridgeMatchPrompt[], participants: WaitingParticipant[]) {
   const now = Date.now();
 
   // Prune stale pending matches older than 90 seconds
@@ -378,6 +425,14 @@ async function evaluateAndNotifyMatches() {
   }
 }
 
+// Helper to trigger pairwise evaluation and broadcast bridge prompts as soon as at least one user is suitable
+async function evaluateAndNotifyMatches() {
+  const participants = Array.from(waitingParticipants.values());
+  const { readyMatches } = await aiMatchmaker.evaluatePairwiseCloseness(participants);
+  broadcastDebugUpdate();
+  notifyReadyMatches(readyMatches, participants);
+}
+
 async function start() {
   const app = express();
   app.use(express.json());
@@ -387,13 +442,25 @@ async function start() {
   // Setup WebSocket Server with noServer
   const wss = new WebSocketServer({ noServer: true });
 
-  // Native ping-pong keepalive interval (every 10 seconds)
+  // Smooth ping-pong keepalive interval (every 25 seconds)
+  // Multi-beat tolerance to avoid dropping connections when two users are idle
   const pingInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
       const socket = ws as any;
-      if (socket.isAlive === false) {
-        return socket.terminate();
+      if (socket.missedHeartbeats === undefined) {
+        socket.missedHeartbeats = 0;
       }
+
+      if (socket.isAlive === false) {
+        socket.missedHeartbeats += 1;
+        // Only terminate after 2 consecutive missed intervals (50s of complete silence)
+        if (socket.missedHeartbeats >= 2) {
+          return socket.terminate();
+        }
+      } else {
+        socket.missedHeartbeats = 0;
+      }
+
       socket.isAlive = false;
       try {
         socket.ping();
@@ -401,7 +468,7 @@ async function start() {
         // ignore
       }
     });
-  }, 10000);
+  }, 25000);
 
   wss.on('close', () => {
     clearInterval(pingInterval);
@@ -419,20 +486,27 @@ async function start() {
   wss.on('connection', (ws) => {
     const socket = ws as any;
     socket.isAlive = true;
+    socket.missedHeartbeats = 0;
 
     socket.on('pong', () => {
       socket.isAlive = true;
+      socket.missedHeartbeats = 0;
     });
 
     let currentVisitorId: string | null = null;
 
     ws.on('message', async (raw) => {
       try {
+        const socket = ws as any;
+        socket.isAlive = true;
+        socket.missedHeartbeats = 0;
+
         const msg: ClientWsMessage = JSON.parse(raw.toString());
 
         // Heartbeat response
         if (msg.type === 'ping') {
           socket.isAlive = true;
+          socket.missedHeartbeats = 0;
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'pong' }));
           }
@@ -445,7 +519,7 @@ async function start() {
             currentVisitorId = visitorId;
             const visitor = getOrCreateVisitor(visitorId, name);
 
-            // Cancel any pending disconnect timer for this visitor
+            // Cancel any pending disconnect timers for this visitor
             if (disconnectTimers.has(visitorId)) {
               clearTimeout(disconnectTimers.get(visitorId)!);
               disconnectTimers.delete(visitorId);
@@ -488,6 +562,7 @@ async function start() {
                 carpoolStatus: getCarpoolRecord(),
                 activeRoomsCount: activeRooms.size,
                 onlineVisitorsCount: getOnlineVisitorCount(),
+                waitingTopicsCount: getWaitingTopicsCount(),
                 activeRoom,
                 waitingTopicId,
                 archivedDebates: archivedDebates.slice(-20).reverse(),
@@ -996,9 +1071,10 @@ async function start() {
             if (typeof newThresh === 'number') {
               aiMatchmaker.setMatchThreshold(newThresh);
               pairDeclineCooldowns.clear();
-              evaluateAndNotifyMatches().catch((err) =>
-                console.error('Error on debug:set_threshold:', err)
-              );
+              broadcastDebugUpdate();
+              const participants = Array.from(waitingParticipants.values());
+              const existingReady = aiMatchmaker.getExistingReadyMatches(participants);
+              notifyReadyMatches(existingReady, participants);
             }
             break;
           }
@@ -1115,10 +1191,10 @@ async function start() {
             }, 45000);
 
             disconnectTimers.set(vId, timer);
-            broadcastPresence();
           }
         }
         socketToVisitor.delete(ws);
+        broadcastPresence();
       }
     });
   });
@@ -1299,6 +1375,7 @@ async function start() {
       onlineVisitors: getOnlineVisitorCount(),
       activeDebates: activeRooms.size,
       totalTopics: topics.length,
+      waitingTopicsCount: getWaitingTopicsCount(),
       archivedDebatesCount: archivedDebates.length,
       waitingParticipantsCount: waitingParticipants.size,
       carpools: getCarpoolRecord(),

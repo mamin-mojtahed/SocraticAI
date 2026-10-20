@@ -120,8 +120,8 @@ export interface TopicPairCloseness {
   pairKey: string;
   userA: { id: string; name: string; topic: string; stance?: string; color: string };
   userB: { id: string; name: string; topic: string; stance?: string; color: string };
-  closeness: number; // 0 to 100 derived from cosine similarity
-  cosineSimilarity: number; // 0.0000 to 1.0000
+  closeness: number; // 0 to 100 (% calibrated semantic closeness / harmony)
+  cosineSimilarity: number; // 0.0000 to 1.0000 (raw mathematical vector cosine similarity)
   threshold: number; // Match threshold (0 to 100)
   embeddingModel: string; // e.g. 'gemini-embedding-2-preview' | 'gemini-embedding-001' | 'text-embedding-004'
   isFallbackModel?: boolean;
@@ -210,6 +210,7 @@ export type ServerWsMessage =
         carpoolStatus: Record<string, TopicCarpoolStatus>;
         activeRoomsCount: number;
         onlineVisitorsCount: number;
+        waitingTopicsCount?: number;
         activeRoom?: DebateRoom | null;
         waitingTopicId?: string | null;
         archivedDebates: ArchivedDebate[];
@@ -230,7 +231,7 @@ export type ServerWsMessage =
   | { type: 'debate:message'; payload: { roomId: string; message: ChatMessage } }
   | { type: 'debate:typing'; payload: { visitorId: string; isTyping: boolean } }
   | { type: 'debate:concluded'; payload: { roomId: string; reason: string; archive: ArchivedDebate } }
-  | { type: 'presence:update'; payload: { onlineCount: number; activeDebatesCount: number } }
+  | { type: 'presence:update'; payload: { onlineCount: number; activeDebatesCount: number; waitingTopicsCount?: number } }
   | { type: 'practice:response'; payload: { message: PracticeMessage; topicId: string } }
   | { type: 'practice:typing'; payload: { isTyping: boolean } }
   | { type: 'bridge:prompt'; payload: BridgeMatchPrompt }

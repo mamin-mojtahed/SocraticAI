@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type {
   Visitor,
   TopicItem,
@@ -54,31 +54,54 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
   const [matchThreshold, setMatchThresholdState] = useState<number>(70);
   const [activeEmbeddingModel, setActiveEmbeddingModel] = useState<string>('gemini-embedding-2-preview');
   const [socialTrendsStatus, setSocialTrendsStatus] = useState<SocialTrendsStatus | null>(null);
+  const [waitingTopicsCountState, setWaitingTopicsCountState] = useState<number>(0);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
+  const thresholdDebounceTimerRef = useRef<number | null>(null);
 
-  // Compute or get isolated visitorId per tab
+  // Derive waiting topics count dynamically from carpool status with fallback to server presence
+  const waitingTopicsCount = useMemo(() => {
+    const derived = Object.values(carpoolStatus).filter(
+      (s) => (s.waitingCount ?? s.waitingUsers?.length ?? 0) > 0
+    ).length;
+    return Math.max(waitingTopicsCountState, derived);
+  }, [carpoolStatus, waitingTopicsCountState]);
+
+  // Compute or get isolated visitorId per tab (guaranteed persistent across page refreshes)
   const visitorIdRef = useRef<string>('');
   if (!visitorIdRef.current) {
     if (options?.customVisitorId) {
       visitorIdRef.current = options.customVisitorId;
     } else {
       const urlParams = new URLSearchParams(window.location.search);
-      const urlVisitor = urlParams.get('v');
+      const urlVisitor = urlParams.get('v') || urlParams.get('visitorId');
       if (urlVisitor) {
         visitorIdRef.current = `v-${urlVisitor}`;
-      } else {
-        if (!window.name || !window.name.startsWith('dialectic_tab_')) {
-          window.name = `dialectic_tab_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        try {
+          sessionStorage.setItem('socratic_visitor_id', visitorIdRef.current);
+        } catch (e) {
+          // ignore
         }
-        const sessionKey = `dialectic_vid_${window.name}`;
-        let stored = sessionStorage.getItem(sessionKey);
+      } else {
+        let stored: string | null = null;
+        try {
+          stored =
+            sessionStorage.getItem('socratic_visitor_id') ||
+            localStorage.getItem('socratic_visitor_id');
+        } catch (e) {
+          // ignore
+        }
         if (!stored) {
-          stored = `v-${Date.now().toString(36).substring(4)}-${Math.random().toString(36).substring(2, 7)}`;
-          sessionStorage.setItem(sessionKey, stored);
+          stored = `v-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+          try {
+            sessionStorage.setItem('socratic_visitor_id', stored);
+            localStorage.setItem('socratic_visitor_id', stored);
+          } catch (e) {
+            // ignore
+          }
         }
         visitorIdRef.current = stored;
       }
@@ -120,13 +143,13 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
         payload: { visitorId: vId, name: options?.initialName },
       });
 
-      // Start ping interval (every 8 seconds to prevent idle timeout)
+      // Smooth ping interval (every 15 seconds to prevent idle timeout reliably)
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = window.setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
         }
-      }, 8000);
+      }, 15000);
     };
 
     ws.onclose = () => {
@@ -155,6 +178,9 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
             setTopics(msg.payload.topics);
             setCarpoolStatus(msg.payload.carpoolStatus);
             setOnlineCount(msg.payload.onlineVisitorsCount);
+            if (typeof msg.payload.waitingTopicsCount === 'number') {
+              setWaitingTopicsCountState(msg.payload.waitingTopicsCount);
+            }
             setActiveDebatesCount(msg.payload.activeRoomsCount);
             setArchivedDebates(msg.payload.archivedDebates || []);
 
@@ -297,6 +323,9 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
           case 'presence:update': {
             setOnlineCount(msg.payload.onlineCount);
             setActiveDebatesCount(msg.payload.activeDebatesCount);
+            if (typeof msg.payload.waitingTopicsCount === 'number') {
+              setWaitingTopicsCountState(msg.payload.waitingTopicsCount);
+            }
             break;
           }
 
@@ -582,7 +611,12 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
   const setMatchThreshold = useCallback(
     (threshold: number) => {
       setMatchThresholdState(threshold);
-      send({ type: 'debug:set_threshold', payload: { threshold } });
+      if (thresholdDebounceTimerRef.current) {
+        window.clearTimeout(thresholdDebounceTimerRef.current);
+      }
+      thresholdDebounceTimerRef.current = window.setTimeout(() => {
+        send({ type: 'debug:set_threshold', payload: { threshold } });
+      }, 200);
     },
     [send]
   );
@@ -595,6 +629,7 @@ export function useDebateSocket(options?: UseDebateSocketOptions) {
     activeRoom,
     waitingTopic,
     onlineCount,
+    waitingTopicsCount,
     activeDebatesCount,
     archivedDebates,
     opponentTyping,

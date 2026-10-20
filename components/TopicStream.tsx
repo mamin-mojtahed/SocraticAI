@@ -750,7 +750,7 @@ const TopicStream: React.FC<TopicStreamProps> = ({
               placeholder="Filter..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
-              className="w-full min-w-0 bg-gray-900 border border-gray-700/80 rounded-md pl-6 sm:pl-7 pr-6 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full min-w-0 bg-gray-900 border border-gray-700/80 rounded-md pl-6 sm:pl-7 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-indigo-500"
             />
             <Search className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 absolute left-2 pointer-events-none" />
             {filterQuery && (

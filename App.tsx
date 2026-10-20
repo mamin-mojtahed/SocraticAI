@@ -300,34 +300,40 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Live Counters (Thinkers Online / Active Dialogues) */}
+          {/* Live Counters (Thinkers Online / Topics Waiting) */}
           <div
-            className="flex items-center gap-1 sm:gap-1.5 bg-gray-900 border border-gray-700/80 px-2 sm:px-2.5 py-1 rounded-md text-xs text-gray-300 font-mono"
-            title="Thinkers present in the Agora / Ongoing Socratic dialogues"
+            className="flex items-center gap-1 sm:gap-1.5 bg-gray-900 border border-gray-700/80 px-2 sm:px-2.5 py-1 rounded-md text-xs text-gray-300 font-mono transition-colors"
+            title={`${primarySocket.onlineCount} thinker${primarySocket.onlineCount === 1 ? '' : 's'} present in the Agora • ${primarySocket.waitingTopicsCount} topic${primarySocket.waitingTopicsCount === 1 ? '' : 's'} waiting for interlocutors${primarySocket.activeDebatesCount > 0 ? ` • ${primarySocket.activeDebatesCount} active dialogue${primarySocket.activeDebatesCount === 1 ? '' : 's'}` : ''}`}
           >
-            <span className="flex items-center gap-1 text-emerald-400">
+            <span
+              className="flex items-center gap-1 text-emerald-400"
+              title={`${primarySocket.onlineCount} thinker${primarySocket.onlineCount === 1 ? '' : 's'} online`}
+            >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
               {primarySocket.onlineCount}
             </span>
             <span className="text-gray-600">/</span>
-            <span className="flex items-center gap-1 text-indigo-300">
+            <span
+              className="flex items-center gap-1 text-indigo-300"
+              title={`${primarySocket.waitingTopicsCount} topic${primarySocket.waitingTopicsCount === 1 ? '' : 's'} waiting for dialogue${primarySocket.activeDebatesCount > 0 ? ` (${primarySocket.activeDebatesCount} in dialogue)` : ''}`}
+            >
               <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-400" />
-              {primarySocket.activeDebatesCount}
+              {primarySocket.waitingTopicsCount}
             </span>
           </div>
 
-          {/* Action 0: Dialogue Graph */}
+          {/* Action 0: Dialogue Logs */}
           <button
-            onClick={() => setIsDebugOpen(true)}
+            onClick={() => setIsDebugOpen((prev) => !prev)}
             className={`px-2 sm:px-2.5 py-1.5 sm:py-1 rounded-md border transition-all text-xs font-medium flex items-center gap-1.5 relative cursor-pointer ${
               isDebugOpen
                 ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500 ring-1 ring-indigo-500'
                 : 'bg-gray-900 hover:bg-gray-800 border-gray-700/80 text-indigo-300 hover:text-indigo-200'
             }`}
-            title={`Dialogue Graph (${primarySocket.debugNodes.length} active thinkers)`}
+            title="Dialogue Logs"
           >
             <Network className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden md:inline whitespace-nowrap">Dialogue Graph</span>
+            <span className="hidden md:inline whitespace-nowrap">Dialogue Logs</span>
             {primarySocket.debugPairs.some(
               (p) => p.closeness >= (p.threshold ?? primarySocket.matchThreshold)
             ) && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
