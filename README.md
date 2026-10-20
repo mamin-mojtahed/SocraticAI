@@ -2,9 +2,9 @@
 
 A real-time, multi-user debate and dialogue platform that pairs people across differing or converging perspectives using Socratic warmup facilitation and semantic vector matchmaking.
 
-**Live App:** [https://ais-pre-fs7ij7ua3eq3i7o6cnzs45-176451555110.us-west2.run.app](https://ais-pre-fs7ij7ua3eq3i7o6cnzs45-176451555110.us-west2.run.app)
+**Live App:** [socraticai.ai.studio](https://socraticai.ai.studio)
 
----
+![SocraticAI topics stream](media/SocraticAI-topics.webp)
 
 ## Quick Local Setup
 
@@ -84,3 +84,9 @@ The backend (`server.ts` + `services/aiMatchmaker.ts`) runs an authoritative Web
 | `npm run build` | Builds the frontend production bundle via Vite |
 | `npm start` | Runs the full-stack server (`tsx server.ts`) |
 | `npm run lint` | Runs TypeScript type-checking (`tsc --noEmit`) |
+
+## Demo
+
+![SocraticAI graph demo](media/SocraticAI-Graph.webp)
+
+![SocraticAI trajectories demo](media/SocraticAI-Trajectories.webp)
